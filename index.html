@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'">
+  <title>CleanAirSchool - EPA 2024 School Recess &amp; Classroom CADR Planner</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-wrap">
+      <div class="brand-mark" aria-hidden="true">CA</div>
+      <div>
+        <h1 class="brand-title">CleanAirSchool</h1>
+        <p class="brand-sub">EPA 2024 NowCast recess planner and ASHRAE 241 classroom ventilation sizer</p>
+      </div>
+    </div>
+    <div class="topbar-actions no-print">
+      <button type="button" id="btn-run-bench" class="btn btn-secondary">Run Calibration Check</button>
+      <button type="button" id="btn-export-json" class="btn btn-primary">Export School Plan JSON</button>
+      <button type="button" id="btn-print" class="btn btn-secondary">Print Nurse Sheet</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="panel inputs-panel no-print" aria-label="Classroom and outdoor air inputs">
+      <div class="panel-head">
+        <h2>School &amp; Room Inputs</h2>
+      </div>
+      <div class="form-stack">
+        <label class="field">
+          <span>Scenario Preset</span>
+          <select id="preset-select"></select>
+        </label>
+        <p id="preset-subtitle" class="muted-note"></p>
+
+        <label class="field">
+          <span>12-Hour Outdoor PM2.5 (ug/m3, oldest to newest)</span>
+          <input id="hourly-input" type="text">
+        </label>
+
+        <div class="triple-grid">
+          <label class="field">
+            <span>Length (ft)</span>
+            <input id="room-len" type="number" min="10" max="200">
+          </label>
+          <label class="field">
+            <span>Width (ft)</span>
+            <input id="room-wid" type="number" min="10" max="200">
+          </label>
+          <label class="field">
+            <span>Height (ft)</span>
+            <input id="room-hgt" type="number" min="8" max="40">
+          </label>
+        </div>
+
+        <div class="double-grid">
+          <label class="field">
+            <span>Students &amp; Staff</span>
+            <input id="room-occ" type="number" min="1" max="400">
+          </label>
+          <label class="field">
+            <span>HVAC Rate (ACH)</span>
+            <input id="hvac-ach" type="number" min="0" max="15" step="0.5">
+          </label>
+        </div>
+
+        <div class="double-grid">
+          <label class="field">
+            <span>HVAC Filter</span>
+            <select id="merv-select">
+              <option value="merv8">MERV 8 (20%)</option>
+              <option value="merv11">MERV 11 (50%)</option>
+              <option value="merv13">MERV 13 (85%)</option>
+              <option value="merv16">MERV 16 (95%)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Portable Units</span>
+            <input id="cleaner-count" type="number" min="0" max="12">
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Portable Air Cleaner Model</span>
+          <select id="cleaner-select">
+            <option value="none">No Portable Cleaner (0 CFM)</option>
+            <option value="corsi_box">Corsi-Rosenthal MERV-13 Box (380 CFM)</option>
+            <option value="classroom_hepa">Classroom True-HEPA Tower (260 CFM)</option>
+            <option value="gym_commercial">Commercial HEPA Scrubber (650 CFM)</option>
+          </select>
+        </label>
+      </div>
+    </aside>
+
+    <section class="main-col" aria-label="Air quality guidance and ventilation model">
+      <section class="kpi-strip">
+        <article class="kpi-card">
+          <span class="kpi-label">Outdoor NowCast AQI</span>
+          <strong id="kpi-outdoor-aqi" class="kpi-value">-</strong>
+          <span id="kpi-outdoor-cat" class="kpi-foot">-</span>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-label">Indoor Steady PM2.5</span>
+          <strong id="kpi-indoor-pm" class="kpi-value">-</strong>
+          <span id="kpi-indoor-drop" class="kpi-foot">-</span>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-label">Classroom Clean ACH</span>
+          <strong id="kpi-ach" class="kpi-value">-</strong>
+          <span id="kpi-units-needed" class="kpi-foot">-</span>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-label">ASHRAE 241 Flow</span>
+          <strong id="kpi-cfm-person" class="kpi-value">-</strong>
+          <span id="kpi-ashrae-status" class="kpi-foot">-</span>
+        </article>
+      </section>
+
+      <div class="visual-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>120-Minute Indoor PM2.5 Decay Curve</h2>
+            <span class="muted-note">Solid: With Cleaners | Dashed: HVAC Baseline</span>
+          </div>
+          <svg id="decay-svg" class="decay-svg" viewBox="0 0 480 260" role="img" aria-label="Indoor PM2.5 concentration over 120 minutes"></svg>
+          <p class="muted-note">Single-compartment well-mixed indoor balance with 0.45 h^-1 infiltration (0.75 penetration) and 0.20 h^-1 deposition.</p>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>School Operations &amp; Nurse Guidance</h2>
+            <span id="alert-badge" class="badge">-</span>
+          </div>
+          <ul class="guidance-list">
+            <li><strong>Recess &amp; PE:</strong> <span id="guide-recess">-</span></li>
+            <li><strong>Outdoor Athletics:</strong> <span id="guide-sports">-</span></li>
+            <li><strong>Asthma &amp; Sensitive Care:</strong> <span id="guide-asthma">-</span></li>
+          </ul>
+          <div class="notices-box">
+            <h3>Parent &amp; Staff Notices (EN / ES)</h3>
+            <p id="notice-en" class="notice-text"></p>
+            <p id="notice-es" class="notice-text"></p>
+          </div>
+        </article>
+      </div>
+
+      <article id="bench-panel" class="panel" hidden>
+        <div class="panel-head">
+          <h2>EPA 2024 Breakpoint &amp; Classroom Filtration Verification</h2>
+          <button type="button" id="btn-close-bench" class="btn btn-small btn-secondary no-print">Close</button>
+        </div>
+        <p id="bench-summary" class="bench-summary"></p>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Scenario</th>
+                <th>NowCast PM2.5</th>
+                <th>Outdoor AQI</th>
+                <th>Baseline ACH</th>
+                <th>Upgraded ACH</th>
+                <th>Steady PM2.5 Change</th>
+              </tr>
+            </thead>
+            <tbody id="bench-tbody"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>CleanAirSchool (MIT License). Synthetic and user-entered values; not a live sensor feed or medical diagnosis.</span>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
