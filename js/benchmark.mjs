@@ -14,7 +14,12 @@ export function runCleanAirBenchmark() {
       actualAqi: out.aqi,
       expectedCategory: c.expectedCategory,
       actualCategory: out.category,
-      pass: out.aqi === c.expectedAqi && out.category === c.expectedCategory,
+      expectedBeyondIndex: Boolean(c.expectedBeyondIndex),
+      actualBeyondIndex: Boolean(out.beyondIndex),
+      pass:
+        out.aqi === c.expectedAqi &&
+        out.category === c.expectedCategory &&
+        Boolean(out.beyondIndex) === Boolean(c.expectedBeyondIndex),
     };
   });
 
@@ -37,8 +42,10 @@ export function runCleanAirBenchmark() {
       nowCastPm25: nowCast.nowCastPm25,
       outdoorAqi: nowCast.aqi,
       alertLevel: guidance.alertLevel,
-      baselineAch: baselineRoom.totalRemovalAch,
-      upgradedAch: upgradedRoom.totalRemovalAch,
+      baselineAch: baselineRoom.deliveredCleanAch,
+      upgradedAch: upgradedRoom.deliveredCleanAch,
+      baselineTotalAch: baselineRoom.totalRemovalAch,
+      upgradedTotalAch: upgradedRoom.totalRemovalAch,
       baselineSteadyPm25: baselineRoom.steadyStatePm25,
       upgradedSteadyPm25: upgradedRoom.steadyStatePm25,
       pm25DropPct: Number((((baselineRoom.steadyStatePm25 - upgradedRoom.steadyStatePm25) / Math.max(0.1, baselineRoom.steadyStatePm25)) * 100).toFixed(1)),

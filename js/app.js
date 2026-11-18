@@ -58,6 +58,7 @@ function init() {
   ];
   for (const el of inputs) {
     el.addEventListener('change', readInputsAndCompute);
+    el.addEventListener('input', readInputsAndCompute);
   }
 
   els.btnRunBench.addEventListener('click', renderBenchmark);
@@ -138,16 +139,17 @@ function recompute() {
   const guidance = buildSchoolGuidance(nowCast, upgraded);
   state.lastOutput = { nowCast, baseline, upgraded, guidance };
 
-  els.kpiOutdoorAqi.textContent = `AQI ${nowCast.aqi}`;
+  els.kpiOutdoorAqi.textContent = nowCast.beyondIndex ? 'AQI 500+' : `AQI ${nowCast.aqi}`;
   els.kpiOutdoorCat.textContent = `${nowCast.category} (NowCast ${nowCast.nowCastPm25} ug/m3)`;
 
   els.kpiIndoorPm.textContent = `${upgraded.steadyStatePm25} ug/m3`;
   els.kpiIndoorDrop.textContent = `Indoor AQI ${upgraded.indoorSteadyAqi.aqi} (-${upgraded.indoorReductionPct}% vs outdoors)`;
 
   els.kpiAch.textContent = `${upgraded.deliveredCleanAch} ACH`;
+  const unitSuffix = state.preset.room.cleanerId === 'none' ? ' (Corsi-class)' : '';
   els.kpiUnitsNeeded.textContent = upgraded.meets5Ach
     ? 'Meets 5.0+ ACH clean-air target'
-    : `Needs ${upgraded.unitsFor5Ach} units total for 5.0 ACH`;
+    : `Needs ${upgraded.unitsFor5Ach} units total${unitSuffix} for 5.0 ACH`;
 
   els.kpiCfmPerson.textContent = `${upgraded.cfmPerPerson} CFM/p`;
   els.kpiAshraeStatus.textContent = upgraded.meetsAshrae241

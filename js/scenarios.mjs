@@ -1,5 +1,5 @@
 /**
- * Synthetic school clean-air planning scenarios + 16-case calibration benchmark.
+ * Synthetic school clean-air planning scenarios + 13-point EPA 2024 breakpoint calibration benchmark.
  */
 
 export const SCHOOL_PRESETS = [
@@ -78,18 +78,17 @@ export const SCHOOL_PRESETS = [
 ];
 
 export const EPA_BREAKPOINT_CASES = [
-  { pm25: 0.0, expectedAqi: 0, expectedCategory: 'Good' },
-  { pm25: 9.0, expectedAqi: 50, expectedCategory: 'Good' },
-  { pm25: 9.1, expectedAqi: 51, expectedCategory: 'Moderate' },
-  { pm25: 35.4, expectedAqi: 100, expectedCategory: 'Moderate' },
-  { pm25: 35.5, expectedAqi: 101, expectedCategory: 'Unhealthy for Sensitive Groups' },
-  { pm25: 55.4, expectedAqi: 150, expectedCategory: 'Unhealthy for Sensitive Groups' },
-  { pm25: 55.5, expectedAqi: 151, expectedCategory: 'Unhealthy' },
-  { pm25: 125.4, expectedAqi: 200, expectedCategory: 'Unhealthy' },
-  { pm25: 125.5, expectedAqi: 201, expectedCategory: 'Very Unhealthy' },
-  { pm25: 225.4, expectedAqi: 300, expectedCategory: 'Very Unhealthy' },
-  { pm25: 225.5, expectedAqi: 301, expectedCategory: 'Hazardous' },
-  { pm25: 325.4, expectedAqi: 400, expectedCategory: 'Hazardous' },
-  { pm25: 325.5, expectedAqi: 401, expectedCategory: 'Hazardous' },
-  { pm25: 500.4, expectedAqi: 500, expectedCategory: 'Hazardous' },
+  { pm25: 0.0, expectedAqi: 0, expectedCategory: 'Good', expectedBeyondIndex: false },
+  { pm25: 9.0, expectedAqi: 50, expectedCategory: 'Good', expectedBeyondIndex: false },
+  { pm25: 9.1, expectedAqi: 51, expectedCategory: 'Moderate', expectedBeyondIndex: false },
+  { pm25: 35.4, expectedAqi: 100, expectedCategory: 'Moderate', expectedBeyondIndex: false },
+  { pm25: 35.5, expectedAqi: 101, expectedCategory: 'Unhealthy for Sensitive Groups', expectedBeyondIndex: false },
+  { pm25: 55.4, expectedAqi: 150, expectedCategory: 'Unhealthy for Sensitive Groups', expectedBeyondIndex: false },
+  { pm25: 55.5, expectedAqi: 151, expectedCategory: 'Unhealthy', expectedBeyondIndex: false },
+  { pm25: 125.4, expectedAqi: 200, expectedCategory: 'Unhealthy', expectedBeyondIndex: false },
+  { pm25: 125.5, expectedAqi: 201, expectedCategory: 'Very Unhealthy', expectedBeyondIndex: false },
+  { pm25: 225.4, expectedAqi: 300, expectedCategory: 'Very Unhealthy', expectedBeyondIndex: false },
+  { pm25: 225.5, expectedAqi: 301, expectedCategory: 'Hazardous', expectedBeyondIndex: false },
+  { pm25: 325.4, expectedAqi: 500, expectedCategory: 'Hazardous', expectedBeyondIndex: false },
+  { pm25: 325.5, expectedAqi: 500, expectedCategory: 'Hazardous (Beyond Index)', expectedBeyondIndex: true },
 ];

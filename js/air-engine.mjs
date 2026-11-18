@@ -16,8 +16,7 @@ export const EPA_PM25_2024_BREAKPOINTS = Object.freeze([
   { cLow: 35.5, cHigh: 55.4, iLow: 101, iHigh: 150, category: 'Unhealthy for Sensitive Groups', color: '#ea580c', key: 'usg' },
   { cLow: 55.5, cHigh: 125.4, iLow: 151, iHigh: 200, category: 'Unhealthy', color: '#dc2626', key: 'unhealthy' },
   { cLow: 125.5, cHigh: 225.4, iLow: 201, iHigh: 300, category: 'Very Unhealthy', color: '#7e22ce', key: 'very_unhealthy' },
-  { cLow: 225.5, cHigh: 325.4, iLow: 301, iHigh: 400, category: 'Hazardous', color: '#7f1d1d', key: 'hazardous' },
-  { cLow: 325.5, cHigh: 500.4, iLow: 401, iHigh: 500, category: 'Hazardous', color: '#7f1d1d', key: 'hazardous' },
+  { cLow: 225.5, cHigh: 325.4, iLow: 301, iHigh: 500, category: 'Hazardous', color: '#7f1d1d', key: 'hazardous' },
 ]);
 
 export const CLEANER_CATALOG = Object.freeze({
@@ -36,18 +35,18 @@ export const MERV_REMOVAL_EFF = Object.freeze({
 
 /**
  * Compute US EPA 2024 PM2.5 AQI from concentration (ug/m3, truncated to 0.1).
+ * Concentrations above 325.4 ug/m3 are Beyond Index (capped at 500 with beyondIndex: true).
  */
 export function pm25ToAqi2024(pm25Raw) {
   const c = Math.max(0, Math.floor(Number(pm25Raw || 0) * 10) / 10);
-  const clamped = Math.min(500.4, c);
   for (const bp of EPA_PM25_2024_BREAKPOINTS) {
-    if (clamped >= bp.cLow && clamped <= bp.cHigh) {
-      const aqi = Math.round(((bp.iHigh - bp.iLow) / (bp.cHigh - bp.cLow)) * (clamped - bp.cLow) + bp.iLow);
-      return { pm25: c, aqi, category: bp.category, key: bp.key, color: bp.color };
+    if (c >= bp.cLow && c <= bp.cHigh) {
+      const aqi = Math.round(((bp.iHigh - bp.iLow) / (bp.cHigh - bp.cLow)) * (c - bp.cLow) + bp.iLow);
+      return { pm25: c, aqi, category: bp.category, key: bp.key, color: bp.color, beyondIndex: false };
     }
   }
   const last = EPA_PM25_2024_BREAKPOINTS[EPA_PM25_2024_BREAKPOINTS.length - 1];
-  return { pm25: c, aqi: 500, category: last.category, key: last.key, color: last.color };
+  return { pm25: c, aqi: 500, category: 'Hazardous (Beyond Index)', key: last.key, color: last.color, beyondIndex: true };
 }
 
 /**
@@ -202,19 +201,20 @@ export function buildSchoolGuidance(aqiResult, roomResult) {
     asthmaProtocol = 'Allow unusually sensitive students indoor option on request';
   }
 
+  const aqiText = aqiResult.beyondIndex ? '500+' : String(aqi);
   const enNotice =
-    `[${alertLevel} - AQI ${aqi} (${aqiResult.category})] School Clean Air Update: ${recessAction}. `
-    + `Filtered classroom mode achieves ${roomResult.totalRemovalAch} ACH `
+    `[${alertLevel} - AQI ${aqiText} (${aqiResult.category})] School Clean Air Update: ${recessAction}. `
+    + `Filtered classroom mode delivers ${roomResult.deliveredCleanAch} clean ACH `
     + `(modeled steady-state indoor PM2.5 ${roomResult.steadyStatePm25} ug/m3, AQI ${roomResult.indoorSteadyAqi.aqi}).`;
 
   const esNotice =
-    `[${alertLevel} - ICA ${aqi}] Aviso Escolar de Aire Limpio: ${
+    `[${alertLevel} - ICA ${aqiText}] Aviso Escolar de Aire Limpio: ${
       aqi >= 151
-        ? 'El recreo y las practicas deportivas pasan al interior con filtracion.'
+        ? 'El recreo y las prácticas deportivas pasan al interior con filtración.'
         : aqi >= 101
-          ? 'Se acorta la actividad intensa al aire libre y se ofrece salon interior filtrado.'
+          ? 'Se acorta la actividad intensa al aire libre y se ofrece salón interior filtrado.'
           : 'Actividades al aire libre permitidas con vigilancia para estudiantes con asma.'
-    } La ventilacion del salon alcanza ${roomResult.totalRemovalAch} cambios/hora.`;
+    } La filtración del salón entrega ${roomResult.deliveredCleanAch} cambios/hora.`;
 
   return { alertLevel, recessAction, sportsAction, asthmaProtocol, enNotice, esNotice };
 }

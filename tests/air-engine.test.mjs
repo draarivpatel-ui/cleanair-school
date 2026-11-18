@@ -4,13 +4,14 @@ import { pm25ToAqi2024, computeEpaNowCast, evaluateClassroomAir, buildSchoolGuid
 import { EPA_BREAKPOINT_CASES } from '../js/scenarios.mjs';
 import { runCleanAirBenchmark } from '../js/benchmark.mjs';
 
-test('EPA 2024 PM2.5 AQI breakpoints match all 14 boundary values across 7 tiers exactly', () => {
+test('EPA 2024 PM2.5 AQI breakpoints match all 6 federal tiers (12 edges) and flag Beyond Index (>325.4)', () => {
   for (const c of EPA_BREAKPOINT_CASES) {
     const out = pm25ToAqi2024(c.pm25);
     assert.equal(out.aqi, c.expectedAqi, `PM2.5=${c.pm25}`);
     assert.equal(out.category, c.expectedCategory, `PM2.5=${c.pm25}`);
+    assert.equal(Boolean(out.beyondIndex), Boolean(c.expectedBeyondIndex), `beyondIndex PM2.5=${c.pm25}`);
   }
-  assert.equal(pm25ToAqi2024(275).aqi, 350);
+  assert.equal(pm25ToAqi2024(275).aqi, 400);
 });
 
 test('EPA NowCast requires 2 of 3 most recent hours and weights rapid spikes heavily', () => {
