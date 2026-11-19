@@ -50,6 +50,20 @@ export function pm25ToAqi2024(pm25Raw) {
 }
 
 /**
+ * Parse a comma-separated hourly PM2.5 list [oldest ... newest] into numbers.
+ * Blank, non-numeric, or negative entries stay in place as null (a missing hour) so the
+ * remaining readings keep their hour positions for the NowCast weights. Trailing commas are ignored.
+ */
+export function parseHourlySeries(text) {
+  return String(text ?? '').replace(/[\s,]+$/, '').split(',').map((part) => {
+    const trimmed = part.trim();
+    if (trimmed === '') return null;
+    const value = Number(trimmed);
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  });
+}
+
+/**
  * Compute US EPA 12-hour NowCast weighted PM2.5 from hourly array [oldest ... newest].
  * Uses standard EPA weight factor w* = max(0.5, 1 - range/max).
  * Returns null if fewer than 2 of the latest 3 hours are valid.

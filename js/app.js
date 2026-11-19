@@ -1,4 +1,4 @@
-import { computeEpaNowCast, evaluateClassroomAir, buildSchoolGuidance } from './air-engine.mjs';
+import { parseHourlySeries, computeEpaNowCast, evaluateClassroomAir, buildSchoolGuidance } from './air-engine.mjs';
 import { SCHOOL_PRESETS } from './scenarios.mjs';
 import { runCleanAirBenchmark } from './benchmark.mjs';
 
@@ -89,11 +89,8 @@ function loadPreset(id) {
 }
 
 function readInputsAndCompute() {
-  const parsed = els.hourlyInput.value
-    .split(',')
-    .map((s) => Number(s.trim()))
-    .filter((n) => Number.isFinite(n) && n >= 0);
-  if (parsed.length >= 2) state.preset.hourlyPm25 = parsed;
+  const parsed = parseHourlySeries(els.hourlyInput.value);
+  if (parsed.filter((n) => n !== null).length >= 2) state.preset.hourlyPm25 = parsed;
   state.preset.room.lengthFt = Number(els.roomLen.value || 30);
   state.preset.room.widthFt = Number(els.roomWid.value || 28);
   state.preset.room.heightFt = Number(els.roomHgt.value || 10);
