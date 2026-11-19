@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pm25ToAqi2024, computeEpaNowCast, evaluateClassroomAir, buildSchoolGuidance } from '../js/air-engine.mjs';
+import { parseHourlySeries, pm25ToAqi2024, computeEpaNowCast, evaluateClassroomAir, buildSchoolGuidance } from '../js/air-engine.mjs';
 import { EPA_BREAKPOINT_CASES } from '../js/scenarios.mjs';
 import { runCleanAirBenchmark } from '../js/benchmark.mjs';
 
@@ -82,4 +82,19 @@ test('CleanAirSchool calibration benchmark passes deterministically', () => {
   assert.deepEqual(b1, b2);
   assert.equal(b1.allBreakpointsPass, true);
   assert.ok(b1.meanIndoorDropPct > 30);
+});
+
+test('hourly text parsing keeps missing hours as gaps instead of zero readings', () => {
+  assert.deepEqual(parseHourlySeries('12, 13.5, 14'), [12, 13.5, 14]);
+  assert.deepEqual(parseHourlySeries('40, , 42, n/a, -3, 44'), [40, null, 42, null, null, 44]);
+  assert.deepEqual(parseHourlySeries('40, 42, 44, '), [40, 42, 44]);
+  assert.deepEqual(parseHourlySeries(''), [null]);
+
+  // A blank hour must not be read as 0 ug/m3, which would drag a smoky NowCast toward Good.
+  const withGap = computeEpaNowCast(parseHourlySeries('80, 82, , 85, 88'));
+  const complete = computeEpaNowCast([80, 82, 84, 85, 88]);
+  assert.ok(Math.abs(withGap.nowCastPm25 - complete.nowCastPm25) < 1);
+  assert.equal(withGap.key, 'unhealthy');
+  assert.equal(computeEpaNowCast(parseHourlySeries('80, 82, 85, , ,')).key, 'unhealthy');
+  assert.equal(computeEpaNowCast(parseHourlySeries('80, 82, 85, x, y')), null);
 });
