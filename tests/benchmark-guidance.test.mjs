@@ -82,7 +82,7 @@ test('guidance: RED band moves recess indoors', () => {
 });
 
 test('guidance: PURPLE band cancels outdoor recess', () => {
-  const g = buildSchoolGuidance(pm25ToAqi2024(250), ROOM);
+  const g = buildSchoolGuidance(pm25ToAqi2024(150), ROOM);
   assert.equal(g.alertLevel, 'PURPLE');
   assert.match(g.recessAction, /Cancel all outdoor recess/);
 });

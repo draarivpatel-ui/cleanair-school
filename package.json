@@ -1,6 +1,6 @@
 {
   "name": "cleanair-school",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "CleanAirSchool: EPA 2024 NowCast AQI outdoor recess planner and ASHRAE 241 classroom CADR ventilation sizing workbench.",
   "type": "module",

@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'">
+  <meta name="description" content="CleanAirSchool turns hourly PM2.5 readings into EPA 2024 NowCast AQI recess decisions, ASHRAE 241 classroom air-cleaner sizing, and modeled cost-per-student comparisons. Every output is a labeled engineering projection.">
   <title>CleanAirSchool - EPA 2024 School Air Planner</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f766e'/%3E%3Ctext x='16' y='22' font-family='sans-serif' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3ECA%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
@@ -28,7 +29,7 @@
   <main>
     <section class="hero" data-hero aria-labelledby="hero-title">
       <div class="hero-copy">
-        <h1 id="hero-title">Wildfire smoke outside. Clean air inside. Show a judge in 30 seconds.</h1>
+        <h1 id="hero-title">Wildfire smoke outside. Clean air inside. The answer in 30 seconds.</h1>
         <p class="hero-lede">One click loads a real-shaped morning smoke spike, then models the classroom response: outdoor AQI, indoor PM2.5 decay, filter options, and the cost per student. Every number is a labeled engineering projection.</p>
         <div class="hero-actions">
           <button type="button" id="btn-hero-demo" class="btn btn-hero">Run the classroom intervention demo</button>
@@ -40,12 +41,12 @@
         <div class="hero-gauge">
           <span class="hero-gauge-label">Outdoor AQI</span>
           <strong id="hero-aqi" class="hero-gauge-value">AQI 167</strong>
-          <span id="hero-cat" class="hero-gauge-cat">Unhealthy</span>
+          <span id="hero-cat" class="hero-chip">Unhealthy</span>
         </div>
-        <div class="hero-arrow" aria-hidden="true">to</div>
+        <div class="hero-arrow" aria-hidden="true">&#8594;</div>
         <div class="hero-gauge hero-gauge-clean">
           <span class="hero-gauge-label">Inside, with filtration</span>
-          <strong id="hero-indoor-aqi" class="hero-gauge-value">AQI 37</strong>
+          <strong id="hero-indoor-aqi" class="hero-gauge-value">AQI 30 Good</strong>
           <span id="hero-indoor-pm" class="hero-gauge-cat">5.5 ug/m3 modeled steady state</span>
         </div>
       </div>
@@ -61,8 +62,8 @@
           </label>
           <p id="preset-subtitle" class="muted-note"></p>
           <label class="field">
-            <span>12-Hour Outdoor PM2.5 (ug/m3, oldest to newest)</span>
-            <input id="hourly-input" type="text" inputmode="decimal">
+            <span>12-Hour Outdoor PM2.5 (ug/m3, oldest to newest; blanks count as missing)</span>
+            <input id="hourly-input" type="text">
           </label>
           <div class="triple-grid">
             <label class="field"><span>Length (ft)</span><input id="room-len" type="number" min="10" max="200"></label>
@@ -121,6 +122,7 @@
               <span class="muted-note">Solid: with cleaners | dashed: HVAC only</span>
             </div>
             <svg id="decay-svg" class="decay-svg" viewBox="0 0 480 260" role="img" aria-label="Indoor PM2.5 over 120 minutes"></svg>
+            <p id="decay-readout" class="decay-readout" aria-live="polite">Hover or tap the chart for per-minute readings.</p>
             <p class="muted-note">Single-compartment well-mixed balance, 0.45 h^-1 infiltration, 0.75 penetration, 0.20 h^-1 deposition. Modeled, not measured.</p>
           </article>
           <article class="panel">
@@ -145,7 +147,7 @@
           <article class="panel">
             <div class="panel-head"><h2>Corsi-Rosenthal box vs commercial HEPA</h2><span class="muted-note">modeled assumptions</span></div>
             <div id="compare-bars" class="compare-bars"></div>
-            <p class="muted-note">Bars scale to the best value in each row. Costs are engineering assumptions over a 3-year horizon, not vendor quotes.</p>
+            <p class="muted-note">Bar length shows each cleaner's effective CADR against the strongest option. Costs are engineering assumptions over a 3-year horizon, not vendor quotes.</p>
           </article>
           <article class="panel">
             <div class="panel-head"><h2>School budget projection</h2><span class="muted-note">not a pilot</span></div>

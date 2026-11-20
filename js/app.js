@@ -9,6 +9,8 @@ const state = {
   preset: structuredClone(SCHOOL_PRESETS[0]),
   lastOutput: null,
   demoActive: true,
+  hourlyWarn: '',
+  chart: null,
 };
 
 const els = {
@@ -36,6 +38,7 @@ const els = {
   kpiCfmPerson: document.getElementById('kpi-cfm-person'),
   kpiAshraeStatus: document.getElementById('kpi-ashrae-status'),
   decaySvg: document.getElementById('decay-svg'),
+  decayReadout: document.getElementById('decay-readout'),
   alertBadge: document.getElementById('alert-badge'),
   guideRecess: document.getElementById('guide-recess'),
   guideSports: document.getElementById('guide-sports'),
@@ -72,6 +75,7 @@ function init() {
     state.demoActive = false;
     loadPreset(els.presetSelect.value);
   });
+  initChartHover();
 
   const inputs = [
     els.hourlyInput, els.roomLen, els.roomWid, els.roomHgt,
@@ -115,13 +119,27 @@ function loadPreset(id) {
   els.mervSelect.value = found.room.mervRating;
   els.cleanerCount.value = String(found.room.cleanerCount);
   els.cleanerSelect.value = found.room.cleanerId;
+  if (!state.demoActive) {
+    els.heroStatus.textContent = `${found.subtitle}. Modeled engineering projection, not a measured school pilot.`;
+  }
   recompute();
 }
 
 function readInputsAndCompute() {
-  const parsed = els.hourlyInput.value.split(',').map((s) => Number(s.trim()))
-    .filter((n) => Number.isFinite(n) && n >= 0);
-  if (parsed.length >= 2) state.preset.hourlyPm25 = parsed;
+  const parsed = els.hourlyInput.value.split(',').map((s) => {
+    const t = s.trim();
+    if (t === '') return null;
+    const n = Number(t);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  });
+  if (parsed.filter((n) => n !== null).length >= 2) {
+    state.preset.hourlyPm25 = parsed;
+    state.hourlyWarn = parsed.some((n) => n === null)
+      ? 'Blank or invalid hourly entries count as missing hours in the NowCast window.'
+      : '';
+  } else {
+    state.hourlyWarn = 'Hourly readings ignored: enter at least 2 valid PM2.5 numbers.';
+  }
   const room = state.preset.room;
   room.lengthFt = Number(els.roomLen.value || 30);
   room.widthFt = Number(els.roomWid.value || 28);
@@ -138,16 +156,27 @@ function readInputsAndCompute() {
 
 function blankResults(message) {
   state.lastOutput = null;
+  state.chart = null;
   for (const el of [
     els.kpiOutdoorAqi, els.kpiOutdoorCat, els.kpiIndoorPm, els.kpiIndoorDrop,
     els.kpiAch, els.kpiUnitsNeeded, els.kpiCfmPerson, els.kpiAshraeStatus,
     els.alertBadge, els.guideRecess, els.guideSports, els.guideAsthma,
   ]) el.textContent = '-';
+  els.alertBadge.style.color = '';
+  els.alertBadge.style.background = '';
   els.noticeEn.textContent = '';
   els.noticeEs.textContent = '';
   els.decaySvg.textContent = '';
+  els.decayReadout.textContent = 'Hover or tap the chart for per-minute readings.';
+  els.compareBars.textContent = '';
   els.heroAqi.textContent = '-';
+  els.heroAqi.style.color = '';
+  els.heroCat.textContent = '';
+  els.heroCat.style.color = '';
+  els.heroCat.style.background = '';
   els.heroIndoorAqi.textContent = '-';
+  els.heroIndoorPm.textContent = '';
+  els.inputStatus.textContent = state.hourlyWarn || message;
   els.heroStatus.textContent = message;
 }
 
@@ -168,14 +197,22 @@ function recompute() {
   const guidance = buildSchoolGuidance(nowCast, upgraded);
   state.lastOutput = { nowCast, baseline, upgraded, guidance };
 
-  els.inputStatus.textContent = upgraded.valid
-    ? 'All inputs valid.'
-    : `Using safe defaults: ${upgraded.inputWarnings.join('; ')}.`;
+  const statusNotes = [];
+  if (upgraded.valid) statusNotes.push('All inputs valid.');
+  else statusNotes.push(`Using safe defaults: ${upgraded.inputWarnings.join('; ')}.`);
+  if (state.hourlyWarn) statusNotes.push(state.hourlyWarn);
+  if (Number(els.filterDays.value || 0) > 0 && !els.deratesToggle.checked) {
+    statusNotes.push('Filter age has no effect until real-world derates are enabled.');
+  }
+  if (upgraded.replacementDue) statusNotes.push('Filter replacement is due (modeled load).');
+  els.inputStatus.textContent = statusNotes.join(' ');
 
   els.kpiOutdoorAqi.textContent = nowCast.beyondIndex ? 'AQI 500+' : `AQI ${nowCast.aqi}`;
   els.kpiOutdoorCat.textContent = `${nowCast.category} (NowCast ${nowCast.nowCastPm25} ug/m3)`;
   els.kpiIndoorPm.textContent = `${upgraded.steadyStatePm25} ug/m3`;
-  els.kpiIndoorDrop.textContent = `Indoor AQI ${upgraded.indoorSteadyAqi.aqi} (-${upgraded.indoorReductionPct}% vs outdoors)`;
+  els.kpiIndoorDrop.textContent = nowCast.nowCastPm25 > 0
+    ? `Indoor AQI ${upgraded.indoorSteadyAqi.aqi} (-${upgraded.indoorReductionPct}% vs outdoors)`
+    : `Indoor AQI ${upgraded.indoorSteadyAqi.aqi} (no outdoor PM2.5)`;
   els.kpiAch.textContent = `${upgraded.deliveredCleanAch} ACH`;
   const unitSuffix = state.preset.room.cleanerId === 'none' ? ' (Corsi-class)' : '';
   els.kpiUnitsNeeded.textContent = upgraded.meets5Ach
@@ -186,7 +223,8 @@ function recompute() {
     ? 'Meets ASHRAE 241 (40 CFM/person)'
     : 'Below 40 CFM/person ASHRAE 241 target';
   els.alertBadge.textContent = `${guidance.alertLevel} ALERT`;
-  els.alertBadge.style.color = nowCast.color;
+  els.alertBadge.style.color = nowCast.chipText;
+  els.alertBadge.style.background = nowCast.chipBg;
   els.guideRecess.textContent = guidance.recessAction;
   els.guideSports.textContent = guidance.sportsAction;
   els.guideAsthma.textContent = guidance.asthmaProtocol;
@@ -195,8 +233,10 @@ function recompute() {
 
   els.heroAqi.textContent = nowCast.beyondIndex ? 'AQI 500+' : `AQI ${nowCast.aqi}`;
   els.heroCat.textContent = nowCast.category;
-  els.heroAqi.style.color = nowCast.color;
-  els.heroIndoorAqi.textContent = `AQI ${upgraded.indoorSteadyAqi.aqi}`;
+  els.heroCat.style.color = nowCast.chipText;
+  els.heroCat.style.background = nowCast.chipBg;
+  els.heroAqi.style.color = '';
+  els.heroIndoorAqi.textContent = `AQI ${upgraded.indoorSteadyAqi.aqi} ${upgraded.indoorSteadyAqi.category}`;
   els.heroIndoorPm.textContent = `${upgraded.steadyStatePm25} ug/m3 modeled steady state`;
   if (state.demoActive) {
     els.heroStatus.textContent = 'Modeled scenario: wildfire smoke plume arriving before morning recess. Every displayed value is an engineering projection, not a measured school pilot.';
@@ -211,27 +251,98 @@ function renderDecayChart(baseTraj, upTraj) {
   const svg = els.decaySvg;
   svg.textContent = '';
   const ns = 'http://www.w3.org/2000/svg';
-  const W = 480, H = 260, PAD = 38;
+  const W = 480, H = 260, PAD = 40;
   const maxY = Math.max(10, ...baseTraj.map((p) => p.indoorPm25), ...upTraj.map((p) => p.indoorPm25));
   const mapX = (min) => PAD + (min / 120) * (W - 2 * PAD);
   const mapY = (val) => H - PAD - (val / maxY) * (H - 2 * PAD);
+  state.chart = { baseTraj, upTraj, mapX, mapY, W, PAD };
 
+  const fmtTick = (v) => {
+    if (v >= 1000) return `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k`;
+    return String(Math.round(v));
+  };
+  const unit = svgEl(ns, 'text', { x: PAD, y: PAD - 12, 'font-size': '10', fill: '#43584f', 'font-weight': 600 });
+  unit.textContent = 'ug/m3';
+  svg.appendChild(unit);
   for (let i = 0; i <= 4; i++) {
     const y = PAD + (i / 4) * (H - 2 * PAD);
     svg.appendChild(svgEl(ns, 'line', { x1: PAD, y1: y, x2: W - PAD, y2: y, stroke: '#e2ece8', 'stroke-width': 1 }));
     const t = svgEl(ns, 'text', { x: PAD - 6, y: y + 4, 'text-anchor': 'end', 'font-size': '10', fill: '#43584f' });
-    t.textContent = (maxY * (1 - i / 4)).toFixed(0);
+    t.textContent = fmtTick(maxY * (1 - i / 4));
     svg.appendChild(t);
   }
   const basePts = baseTraj.map((p) => `${mapX(p.minute).toFixed(1)},${mapY(p.indoorPm25).toFixed(1)}`).join(' ');
   const upPts = upTraj.map((p) => `${mapX(p.minute).toFixed(1)},${mapY(p.indoorPm25).toFixed(1)}`).join(' ');
   svg.appendChild(svgEl(ns, 'polyline', { points: basePts, fill: 'none', stroke: '#94a3b8', 'stroke-width': 2.2, 'stroke-dasharray': '6 4' }));
   svg.appendChild(svgEl(ns, 'polyline', { points: upPts, fill: 'none', stroke: '#0f766e', 'stroke-width': 3 }));
+  for (const p of baseTraj) {
+    const c = svgEl(ns, 'circle', { cx: mapX(p.minute), cy: mapY(p.indoorPm25), r: 2.6, fill: '#94a3b8' });
+    const tip = svgEl(ns, 'title', {});
+    tip.textContent = `${p.minute} min HVAC only: ${p.indoorPm25} ug/m3 (AQI ${p.indoorAqi})`;
+    c.appendChild(tip);
+    svg.appendChild(c);
+  }
+  for (const p of upTraj) {
+    const c = svgEl(ns, 'circle', { cx: mapX(p.minute), cy: mapY(p.indoorPm25), r: 3, fill: '#0f766e' });
+    const tip = svgEl(ns, 'title', {});
+    tip.textContent = `${p.minute} min with cleaners: ${p.indoorPm25} ug/m3 (AQI ${p.indoorAqi})`;
+    c.appendChild(tip);
+    svg.appendChild(c);
+  }
   for (const min of [0, 30, 60, 90, 120]) {
     const t = svgEl(ns, 'text', { x: mapX(min), y: H - 14, 'text-anchor': 'middle', 'font-size': '10', fill: '#43584f' });
     t.textContent = `${min}m`;
     svg.appendChild(t);
   }
+  const guide = svgEl(ns, 'g', { visibility: 'hidden', 'data-hover-layer': 'true' });
+  guide.appendChild(svgEl(ns, 'line', {
+    'data-guide-line': 'true', x1: 0, y1: PAD, x2: 0, y2: H - PAD, stroke: '#0b4f49', 'stroke-width': 1, 'stroke-dasharray': '3 3',
+  }));
+  guide.appendChild(svgEl(ns, 'circle', { 'data-guide-base': 'true', r: 5, fill: 'none', stroke: '#94a3b8', 'stroke-width': 2 }));
+  guide.appendChild(svgEl(ns, 'circle', { 'data-guide-up': 'true', r: 5.5, fill: 'none', stroke: '#0b4f49', 'stroke-width': 2.5 }));
+  svg.appendChild(guide);
+  const hit = svgEl(ns, 'rect', {
+    x: PAD, y: PAD, width: W - 2 * PAD, height: H - 2 * PAD, fill: 'transparent', 'pointer-events': 'all', 'data-hit-layer': 'true',
+  });
+  svg.appendChild(hit);
+}
+
+function initChartHover() {
+  const svg = els.decaySvg;
+  const defaultReadout = 'Hover or tap the chart for per-minute readings.';
+  const nearest = (evt) => {
+    if (!state.chart) return;
+    const { mapX, W, PAD, baseTraj, upTraj } = state.chart;
+    const r = svg.getBoundingClientRect();
+    const vx = ((evt.clientX - r.left) * W) / r.width;
+    const frac = Math.min(1, Math.max(0, (vx - PAD) / (W - 2 * PAD)));
+    const minute = Math.round((frac * 120) / 10) * 10;
+    const idx = minute / 10;
+    const base = baseTraj[idx];
+    const up = upTraj[idx];
+    if (!base || !up) return;
+    const guide = svg.querySelector('[data-hover-layer]');
+    const line = svg.querySelector('[data-guide-line]');
+    const cb = svg.querySelector('[data-guide-base]');
+    const cu = svg.querySelector('[data-guide-up]');
+    const x = mapX(minute);
+    guide.setAttribute('visibility', 'visible');
+    line.setAttribute('x1', String(x));
+    line.setAttribute('x2', String(x));
+    cb.setAttribute('cx', String(x));
+    cb.setAttribute('cy', String(state.chart.mapY(base.indoorPm25)));
+    cu.setAttribute('cx', String(x));
+    cu.setAttribute('cy', String(state.chart.mapY(up.indoorPm25)));
+    els.decayReadout.textContent =
+      `At ${minute} min: ${up.indoorPm25} ug/m3 with cleaners (AQI ${up.indoorAqi}) vs ${base.indoorPm25} ug/m3 HVAC only (AQI ${base.indoorAqi}).`;
+  };
+  svg.addEventListener('pointermove', nearest);
+  svg.addEventListener('pointerdown', nearest);
+  svg.addEventListener('pointerleave', () => {
+    const guide = svg.querySelector('[data-hover-layer]');
+    if (guide) guide.setAttribute('visibility', 'hidden');
+    if (els.decayReadout) els.decayReadout.textContent = defaultReadout;
+  });
 }
 
 function svgEl(ns, tag, attrs) {
@@ -294,7 +405,9 @@ function renderBudget() {
   const v = document.createElement('strong'); v.textContent = `$${p.total3YearUsd}`;
   total.append(l, v);
   els.budgetBreakdown.appendChild(total);
-  els.budgetNote.textContent = p.projectionNote;
+  els.budgetNote.textContent = cleanerId === 'none'
+    ? `${p.projectionNote} No cleaner selected above; shown as a Corsi-Rosenthal reference.`
+    : p.projectionNote;
 }
 
 function renderBenchmark() {
@@ -324,7 +437,7 @@ function downloadPlanJson() {
   if (!state.lastOutput) return;
   const payload = {
     tool: 'CleanAirSchool',
-    version: '2.0.0',
+    version: '2.1.0',
     modelScope: 'EPA 2024 breakpoints + single-room steady/transient model with optional derates. All outputs are modeled projections; no live sensor feed or measured school pilot.',
     preset: state.preset,
     output: state.lastOutput,
