@@ -122,7 +122,9 @@
               <span class="muted-note">Solid: with cleaners | dashed: HVAC only</span>
             </div>
             <svg id="decay-svg" class="decay-svg" viewBox="0 0 480 260" role="img" aria-label="Indoor PM2.5 over 120 minutes"></svg>
-            <p id="decay-readout" class="decay-readout" aria-live="polite">Hover or tap the chart for per-minute readings.</p>
+            <label for="decay-minute" class="decay-minute-label">Chart time (minutes)</label>
+            <input id="decay-minute" class="decay-minute" type="range" min="0" max="120" step="10" value="0" disabled>
+            <p id="decay-readout" class="decay-readout"></p>
             <p class="muted-note">Single-compartment well-mixed balance, 0.45 h^-1 infiltration, 0.75 penetration, 0.20 h^-1 deposition. Modeled, not measured.</p>
           </article>
           <article class="panel">

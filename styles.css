@@ -128,6 +128,9 @@ body {
 
 .visual-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; }
 .decay-svg { width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; background: #fbfefc; display: block; margin-bottom: 6px; cursor: crosshair; }
+.decay-minute-label { display: block; font-size: 0.85rem; font-weight: 600; }
+.decay-minute { display: block; width: 100%; min-height: 32px; margin: 0 0 6px; accent-color: var(--accent); }
+.decay-minute:focus-visible { outline: 3px solid var(--accent-deep); outline-offset: 2px; }
 .decay-readout { margin: 0 0 8px; min-height: 1.3em; font-size: 0.85rem; font-weight: 600; color: var(--accent-deep); }
 .badge { padding: 4px 10px; border-radius: 999px; font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; background: var(--accent-soft); white-space: nowrap; }
 .guidance-list { margin: 0 0 12px; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; font-size: 0.94rem; }

@@ -38,6 +38,7 @@ const els = {
   kpiCfmPerson: document.getElementById('kpi-cfm-person'),
   kpiAshraeStatus: document.getElementById('kpi-ashrae-status'),
   decaySvg: document.getElementById('decay-svg'),
+  decayMinute: document.getElementById('decay-minute'),
   decayReadout: document.getElementById('decay-readout'),
   alertBadge: document.getElementById('alert-badge'),
   guideRecess: document.getElementById('guide-recess'),
@@ -75,7 +76,7 @@ function init() {
     state.demoActive = false;
     loadPreset(els.presetSelect.value);
   });
-  initChartHover();
+  initChartControls();
 
   const inputs = [
     els.hourlyInput, els.roomLen, els.roomWid, els.roomHgt,
@@ -167,7 +168,9 @@ function blankResults(message) {
   els.noticeEn.textContent = '';
   els.noticeEs.textContent = '';
   els.decaySvg.textContent = '';
-  els.decayReadout.textContent = 'Hover or tap the chart for per-minute readings.';
+  els.decayMinute.disabled = true;
+  els.decayMinute.removeAttribute('aria-valuetext');
+  els.decayReadout.textContent = `Chart readings unavailable. ${message}`;
   els.compareBars.textContent = '';
   els.heroAqi.textContent = '-';
   els.heroAqi.style.color = '';
@@ -305,44 +308,56 @@ function renderDecayChart(baseTraj, upTraj) {
     x: PAD, y: PAD, width: W - 2 * PAD, height: H - 2 * PAD, fill: 'transparent', 'pointer-events': 'all', 'data-hit-layer': 'true',
   });
   svg.appendChild(hit);
+  renderSelectedDecayReading();
+  els.decayMinute.disabled = false;
 }
 
-function initChartHover() {
+function initChartControls() {
   const svg = els.decaySvg;
-  const defaultReadout = 'Hover or tap the chart for per-minute readings.';
   const nearest = (evt) => {
     if (!state.chart) return;
-    const { mapX, W, PAD, baseTraj, upTraj } = state.chart;
+    const { W, PAD } = state.chart;
     const r = svg.getBoundingClientRect();
+    if (r.width === 0) return;
     const vx = ((evt.clientX - r.left) * W) / r.width;
     const frac = Math.min(1, Math.max(0, (vx - PAD) / (W - 2 * PAD)));
-    const minute = Math.round((frac * 120) / 10) * 10;
-    const idx = minute / 10;
-    const base = baseTraj[idx];
-    const up = upTraj[idx];
-    if (!base || !up) return;
-    const guide = svg.querySelector('[data-hover-layer]');
-    const line = svg.querySelector('[data-guide-line]');
-    const cb = svg.querySelector('[data-guide-base]');
-    const cu = svg.querySelector('[data-guide-up]');
-    const x = mapX(minute);
-    guide.setAttribute('visibility', 'visible');
-    line.setAttribute('x1', String(x));
-    line.setAttribute('x2', String(x));
-    cb.setAttribute('cx', String(x));
-    cb.setAttribute('cy', String(state.chart.mapY(base.indoorPm25)));
-    cu.setAttribute('cx', String(x));
-    cu.setAttribute('cy', String(state.chart.mapY(up.indoorPm25)));
-    els.decayReadout.textContent =
-      `At ${minute} min: ${up.indoorPm25} ug/m3 with cleaners (AQI ${up.indoorAqi}) vs ${base.indoorPm25} ug/m3 HVAC only (AQI ${base.indoorAqi}).`;
+    renderDecayReading(Math.round((frac * 120) / 10) * 10);
   };
   svg.addEventListener('pointermove', nearest);
   svg.addEventListener('pointerdown', nearest);
-  svg.addEventListener('pointerleave', () => {
-    const guide = svg.querySelector('[data-hover-layer]');
-    if (guide) guide.setAttribute('visibility', 'hidden');
-    if (els.decayReadout) els.decayReadout.textContent = defaultReadout;
-  });
+  svg.addEventListener('pointerleave', renderSelectedDecayReading);
+  svg.addEventListener('pointercancel', renderSelectedDecayReading);
+  els.decayMinute.addEventListener('input', renderSelectedDecayReading);
+}
+
+function renderSelectedDecayReading() {
+  const reading = renderDecayReading(els.decayMinute.valueAsNumber);
+  if (reading) els.decayMinute.setAttribute('aria-valuetext', reading);
+}
+
+function renderDecayReading(minute) {
+  if (!state.chart) return;
+  const svg = els.decaySvg;
+  const { mapX, mapY, baseTraj, upTraj } = state.chart;
+  const idx = minute / 10;
+  const base = baseTraj[idx];
+  const up = upTraj[idx];
+  if (!base || !up) return;
+  const guide = svg.querySelector('[data-hover-layer]');
+  const line = svg.querySelector('[data-guide-line]');
+  const cb = svg.querySelector('[data-guide-base]');
+  const cu = svg.querySelector('[data-guide-up]');
+  const x = mapX(minute);
+  guide.setAttribute('visibility', 'visible');
+  line.setAttribute('x1', String(x));
+  line.setAttribute('x2', String(x));
+  cb.setAttribute('cx', String(x));
+  cb.setAttribute('cy', String(mapY(base.indoorPm25)));
+  cu.setAttribute('cx', String(x));
+  cu.setAttribute('cy', String(mapY(up.indoorPm25)));
+  const reading = `At ${minute} min: ${up.indoorPm25} ug/m3 with cleaners (AQI ${up.indoorAqi}) vs ${base.indoorPm25} ug/m3 HVAC only (AQI ${base.indoorAqi}).`;
+  if (els.decayReadout.textContent !== reading) els.decayReadout.textContent = reading;
+  return reading;
 }
 
 function svgEl(ns, tag, attrs) {
