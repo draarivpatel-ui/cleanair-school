@@ -171,6 +171,71 @@
         </article>
       </div>
     </section>
+
+    <section id="fleet-lab" class="fleet-lab no-print" hidden aria-labelledby="fleet-lab-title">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 id="fleet-lab-title">Fleet Retrofit &amp; Lifecycle Lab</h2>
+          <span class="muted-note">modeled projection</span>
+        </div>
+        <p id="fl-status" class="muted-note" role="status"></p>
+        <div class="fleet-controls">
+          <div id="fl-regimes" class="fl-regime-bar" role="group" aria-label="Outdoor smoke regime">
+            <button type="button" class="fl-regime" data-regime="moderate-20" aria-pressed="false">Moderate 20 ug/m3</button>
+            <button type="button" class="fl-regime" data-regime="usg-45" aria-pressed="false">USG 45 ug/m3</button>
+            <button type="button" class="fl-regime" data-regime="wildfire-85" aria-pressed="true">Wildfire 85 ug/m3</button>
+            <button type="button" class="fl-regime" data-regime="hazardous-260" aria-pressed="false">Hazardous 260 ug/m3</button>
+          </div>
+          <div class="fleet-inputs">
+            <label class="field"><span>Classrooms</span><input id="fl-classrooms" type="number" min="1" max="100" value="20"></label>
+            <label class="field"><span>Students / room</span><input id="fl-students" type="number" min="1" max="60" value="26"></label>
+            <label class="field"><span>Filter age (days)</span><input id="fl-filter-days" type="number" min="0" max="3650" value="0"></label>
+            <label class="check-field"><input id="fl-derates" type="checkbox" checked><span>Apply real-world derates</span></label>
+          </div>
+        </div>
+        <div class="table-scroll"><table class="data-table fleet-table">
+          <thead><tr>
+            <th>Strategy</th><th>Units/room</th><th>Clean ACH</th><th>EOL ACH</th>
+            <th>Indoor PM2.5</th><th>Indoor AQI</th><th>CFM/person</th><th>ASHRAE 241</th>
+            <th>School 3-yr</th><th>$/student</th>
+          </tr></thead>
+          <tbody id="fl-tbody"></tbody>
+        </table></div>
+        <p class="muted-note">EOL column applies the 0.60 loaded-filter CADR fraction. Click a row to select a strategy. Fleets are sized for 5.0 clean ACH with fresh filters. Modeled projection, not a measured pilot.</p>
+        <div class="fleet-charts">
+          <figure class="fleet-chart">
+            <figcaption>3-year school cost vs delivered clean ACH</figcaption>
+            <svg id="fl-pareto-svg" class="fl-svg" viewBox="0 0 460 280" role="img" aria-label="Pareto frontier of school cost versus clean ACH"></svg>
+          </figure>
+          <figure class="fleet-chart">
+            <figcaption>120-minute indoor PM2.5 by strategy (selected regime)</figcaption>
+            <svg id="fl-decay-svg" class="fl-svg" viewBox="0 0 480 270" role="img" aria-label="Indoor PM2.5 decay per strategy"></svg>
+            <ul id="fl-decay-legend" class="fl-legend"></ul>
+          </figure>
+        </div>
+        <div class="fleet-export">
+          <p class="fl-digest-line">SHA-256 <code id="fl-digest">-</code></p>
+          <div class="fl-btn-row">
+            <button type="button" id="fl-export-json" class="btn btn-secondary btn-small">JSON</button>
+            <button type="button" id="fl-export-csv" class="btn btn-secondary btn-small">CSV</button>
+            <button type="button" id="fl-export-md" class="btn btn-secondary btn-small">Markdown</button>
+            <button type="button" id="fl-share" class="btn btn-secondary btn-small">Copy share link</button>
+            <button type="button" id="fl-verify" class="btn btn-secondary btn-small">Verify integrity</button>
+            <button type="button" id="fl-tamper" class="btn btn-secondary btn-small">Tamper test</button>
+          </div>
+          <input id="fl-share-url" class="fl-share-url" type="text" readonly aria-label="Shareable bookmark URL">
+          <p id="fl-verify-out" class="muted-note" role="status"></p>
+        </div>
+        <div class="fleet-selftest">
+          <div class="fl-selftest-head">
+            <h3>In-page self-tests</h3>
+            <button type="button" id="fl-run-tests" class="btn btn-secondary btn-small">Re-run checks</button>
+          </div>
+          <p id="fl-test-summary" class="fl-test-summary"></p>
+          <ol id="fl-test-list" class="fl-test-list"></ol>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="footer">

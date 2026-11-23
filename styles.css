@@ -156,6 +156,56 @@ body {
 .data-table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
 .data-table th, .data-table td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 
+.fleet-lab { padding: 0 clamp(16px, 3vw, 40px) 26px; max-width: 1500px; margin: 0 auto; }
+.fleet-lab[hidden] { display: none; }
+.fleet-controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; margin: 12px 0 14px; }
+.fl-regime-bar { display: flex; flex-wrap: wrap; gap: 6px; }
+.fl-regime {
+  font: inherit; font-size: 0.84rem; font-weight: 650; padding: 7px 12px;
+  border-radius: 999px; border: 1px solid var(--border); background: var(--surface);
+  color: var(--ink); cursor: pointer; min-height: 36px;
+}
+.fl-regime:hover { border-color: var(--accent); }
+.fl-regime[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.fl-regime:focus-visible { outline: 3px solid #99d6cf; outline-offset: 2px; }
+.fleet-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.fleet-inputs .field { min-width: 104px; }
+.fleet-table tbody tr { cursor: pointer; }
+.fleet-table tbody tr:focus-visible { outline: 3px solid #99d6cf; outline-offset: -3px; }
+.fleet-table tbody tr.fl-selected { background: var(--accent-soft); }
+.fl-chip {
+  display: inline-block; padding: 1px 9px; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 700; white-space: nowrap;
+}
+.fleet-charts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin: 14px 0; }
+.fleet-chart { margin: 0; min-width: 0; }
+.fleet-chart figcaption { font-size: 0.85rem; font-weight: 650; color: var(--ink-muted); margin-bottom: 6px; }
+.fl-svg { width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; background: #fbfefc; display: block; }
+.fl-svg circle:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 1px; }
+.fl-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 0; padding: 0; font-size: 0.8rem; color: var(--ink-muted); }
+.fl-legend li { display: flex; align-items: center; gap: 5px; }
+.fl-legend-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.fleet-export { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; }
+.fl-digest-line { font-size: 0.8rem; color: var(--ink-muted); margin: 0 0 8px; word-break: break-all; }
+.fl-digest-line code { font-family: var(--font-mono); font-size: 0.78rem; }
+.fl-btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.fl-share-url {
+  width: 100%; font-family: var(--font-mono); font-size: 0.75rem; padding: 6px 8px;
+  border: 1px solid var(--border); border-radius: 7px; color: var(--ink-muted); background: var(--surface-alt);
+}
+.fleet-selftest { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
+.fl-selftest-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.fl-selftest-head h3 { margin: 0; font-size: 0.95rem; }
+.fl-test-summary { font-weight: 700; font-size: 0.9rem; margin: 8px 0 6px; }
+.fl-test-summary[data-state="ok"] { color: var(--accent-deep); }
+.fl-test-summary[data-state="bad"] { color: var(--warn); }
+.fl-test-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; max-height: 280px; overflow-y: auto; }
+.fl-test-mark { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-right: 6px; }
+.fl-test-mark.pass { background: #dcfce7; color: #166534; }
+.fl-test-mark.fail { background: #fee2e2; color: #991b1b; }
+#fl-verify-out[data-state="ok"] { color: var(--accent-deep); font-weight: 600; }
+#fl-verify-out[data-state="bad"] { color: var(--warn); font-weight: 600; }
+
 .footer { text-align: center; padding: 22px 20px 34px; color: var(--ink-muted); font-size: 0.9rem; max-width: 90ch; margin: 0 auto; }
 
 @media (max-width: 1080px) {
@@ -164,6 +214,7 @@ body {
   .kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inputs-panel { order: 2; }
   .main-col { order: 1; }
+  .fleet-charts { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 520px) {
@@ -189,6 +240,7 @@ body {
 
 @media print {
   .no-print { display: none !important; }
+  .fleet-lab { display: none !important; }
   body { background: #fff; }
   .hero { background: #fff; color: #000; padding: 8px 0; }
   .hero h1 { color: #000; }

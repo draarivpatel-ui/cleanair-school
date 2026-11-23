@@ -469,3 +469,15 @@ function downloadPlanJson() {
 }
 
 init();
+
+// Fleet Retrofit & Lifecycle Lab loads only when js/fleet-lab.mjs exists; the
+// section markup stays hidden when the module or its host element is absent.
+import('./fleet-lab.mjs')
+  .then((m) => {
+    try {
+      window.__casFleetLab = m.initFleetLab(document, window);
+    } catch {
+      window.__casFleetLab = null;
+    }
+  })
+  .catch(() => { window.__casFleetLab = null; });
