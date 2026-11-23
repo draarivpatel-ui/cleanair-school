@@ -721,6 +721,9 @@ export function initFleetLab(doc = document, win = window) {
   if (!ui.tbody || !ui.paretoSvg || !ui.decaySvg) return null;
 
   const handle = { state: normalizeFleetState(FLEET_DEFAULTS), model: null, doc };
+  // Phones get a narrower chart viewBox so axis text stays legible after scaling.
+  const narrowQuery = typeof win.matchMedia === 'function' ? win.matchMedia('(max-width: 520px)') : null;
+  const isNarrow = () => !!(narrowQuery && narrowQuery.matches);
   const seeded = typeof win.location?.hash === 'string' ? decodeCasHash(win.location.hash) : null;
   if (seeded) handle.state = seeded;
 
@@ -795,38 +798,39 @@ export function initFleetLab(doc = document, win = window) {
   function renderPareto(model) {
     const svg = ui.paretoSvg;
     svg.textContent = '';
-    const W = 460, H = 280, PAD = 52;
+    const W = isNarrow() ? 380 : 460, H = isNarrow() ? 300 : 280, PAD = 52;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     const pts = model.pareto.points;
     const maxX = Math.max(8, ...pts.map((p) => p.cleanAch), model.pareto.ashrae241EquivAch) * 1.08;
     const maxY = Math.max(1000, ...pts.map((p) => p.school3YearUsd)) * 1.12;
     const mx = (v) => PAD + (v / maxX) * (W - 2 * PAD);
     const my = (v) => H - PAD - (v / maxY) * (H - 2 * PAD);
 
-    svg.appendChild(svgEl(doc, 'text', { x: PAD, y: 20, 'font-size': 10, 'font-weight': 600, fill: '#43584f' })).textContent = 'USD, 3-year school total';
+    svg.appendChild(svgEl(doc, 'text', { x: PAD, y: 20, 'font-size': 11.5, 'font-weight': 600, fill: '#4a5753' })).textContent = 'USD, 3-year school total';
     for (let i = 0; i <= 4; i++) {
       const y = PAD + (i / 4) * (H - 2 * PAD);
-      svg.appendChild(svgEl(doc, 'line', { x1: PAD, y1: y, x2: W - PAD, y2: y, stroke: '#e2ece8', 'stroke-width': 1 }));
-      const t = svgEl(doc, 'text', { x: PAD - 6, y: y + 4, 'text-anchor': 'end', 'font-size': 10, fill: '#43584f' });
+      svg.appendChild(svgEl(doc, 'line', { x1: PAD, y1: y, x2: W - PAD, y2: y, stroke: '#e3e9e7', 'stroke-width': 1 }));
+      const t = svgEl(doc, 'text', { x: PAD - 6, y: y + 4, 'text-anchor': 'end', 'font-size': 11.5, fill: '#4a5753' });
       t.textContent = `$${Math.round(maxY * (1 - i / 4) / 1000)}k`;
       svg.appendChild(t);
       const x = PAD + (i / 4) * (W - 2 * PAD);
-      const xt = svgEl(doc, 'text', { x, y: H - PAD + 16, 'text-anchor': 'middle', 'font-size': 10, fill: '#43584f' });
+      const xt = svgEl(doc, 'text', { x, y: H - PAD + 16, 'text-anchor': 'middle', 'font-size': 11.5, fill: '#4a5753' });
       xt.textContent = `${(maxX * i / 4).toFixed(1)}`;
       svg.appendChild(xt);
     }
-    const axl = svgEl(doc, 'text', { x: W / 2, y: H - 8, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 600, fill: '#43584f' });
+    const axl = svgEl(doc, 'text', { x: W / 2, y: H - 8, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 600, fill: '#4a5753' });
     axl.textContent = 'Delivered clean ACH (fresh filters)';
     svg.appendChild(axl);
 
     const targetX = mx(model.pareto.ashrae241EquivAch);
     svg.appendChild(svgEl(doc, 'line', {
-      x1: targetX, y1: PAD, x2: targetX, y2: H - PAD, stroke: '#b45309', 'stroke-width': 1.6, 'stroke-dasharray': '5 4',
+      x1: targetX, y1: PAD, x2: targetX, y2: H - PAD, stroke: '#a85d0a', 'stroke-width': 1.6, 'stroke-dasharray': '5 4',
     }));
     const targetText = `ASHRAE 241: 40 CFM/person ~ ${model.pareto.ashrae241EquivAch} ACH`;
-    const targetAnchorEnd = targetX - 6 - targetText.length * 5.4 >= PAD;
+    const targetAnchorEnd = targetX - 6 - targetText.length * 6.1 >= PAD;
     const tl = svgEl(doc, 'text', {
       x: targetAnchorEnd ? targetX - 6 : targetX + 6,
-      y: H - PAD - 5, 'font-size': 9.5, fill: '#b45309', 'font-weight': 700,
+      y: H - PAD - 5, 'font-size': 10.5, fill: '#8a4b06', 'font-weight': 700,
       'text-anchor': targetAnchorEnd ? 'end' : 'start',
     });
     tl.textContent = targetText;
@@ -835,7 +839,7 @@ export function initFleetLab(doc = document, win = window) {
     const fr = model.pareto.frontier;
     if (fr.length > 1) {
       const line = fr.map((p) => `${mx(p.cleanAch).toFixed(1)},${my(p.school3YearUsd).toFixed(1)}`).join(' ');
-      svg.appendChild(svgEl(doc, 'polyline', { points: line, fill: 'none', stroke: '#0f766e', 'stroke-width': 2, 'stroke-dasharray': '7 4', opacity: 0.75 }));
+      svg.appendChild(svgEl(doc, 'polyline', { points: line, fill: 'none', stroke: '#0d6b63', 'stroke-width': 2, 'stroke-dasharray': '7 4', opacity: 0.7 }));
     }
     const labels = [];
     for (const p of pts) {
@@ -853,33 +857,33 @@ export function initFleetLab(doc = document, win = window) {
       svg.appendChild(c);
       labels.push({
         name: p.name,
-        x: mx(p.cleanAch) > W - PAD - 92 ? mx(p.cleanAch) - 9 : mx(p.cleanAch) + 9,
+        x: mx(p.cleanAch) > W - PAD - 104 ? mx(p.cleanAch) - 9 : mx(p.cleanAch) + 9,
         y: my(p.school3YearUsd) - 7,
-        anchor: mx(p.cleanAch) > W - PAD - 92 ? 'end' : 'start',
-        w: p.name.length * 5.4,
+        anchor: mx(p.cleanAch) > W - PAD - 104 ? 'end' : 'start',
+        w: p.name.length * 6.1,
       });
     }
     // Stagger labels that would overlap: same y-band and crossing x-ranges.
     // The target-line label is a reserved box; point labels bump up instead.
-    const tL = targetAnchorEnd ? targetX - 6 - targetText.length * 5.4 : targetX + 6;
-    const reserved = [{ l: tL, r: tL + targetText.length * 5.4, y: H - PAD - 5 }];
+    const tL = targetAnchorEnd ? targetX - 6 - targetText.length * 6.1 : targetX + 6;
+    const reserved = [{ l: tL, r: tL + targetText.length * 6.1, y: H - PAD - 5 }];
     let bumped = true;
     for (let guard = 0; bumped && guard < 24; guard++) {
       bumped = false;
       for (let i = 0; i < labels.length; i++) {
         for (let j = i + 1; j < labels.length; j++) {
           const a = labels[i], b = labels[j];
-          if (Math.abs(a.y - b.y) >= 11) continue;
+          if (Math.abs(a.y - b.y) >= 12.5) continue;
           const aL = a.anchor === 'end' ? a.x - a.w : a.x;
           const bL = b.anchor === 'end' ? b.x - b.w : b.x;
-          if (aL + a.w > bL && bL + b.w > aL) { b.y += 12; bumped = true; }
+          if (aL + a.w > bL && bL + b.w > aL) { b.y += 13; bumped = true; }
         }
       }
       for (const L of labels) {
         const lL = L.anchor === 'end' ? L.x - L.w : L.x;
         for (const res of reserved) {
-          if (Math.abs(L.y - res.y) < 11 && lL + L.w > res.l && res.r > lL) {
-            L.y -= 12;
+          if (Math.abs(L.y - res.y) < 12.5 && lL + L.w > res.l && res.r > lL) {
+            L.y -= 13;
             bumped = true;
           }
         }
@@ -887,7 +891,7 @@ export function initFleetLab(doc = document, win = window) {
     }
     for (const L of labels) {
       const lb = svgEl(doc, 'text', {
-        x: L.x, y: L.y, 'font-size': 9.5, fill: '#10201a', 'text-anchor': L.anchor,
+        x: L.x, y: L.y, 'font-size': 10.5, fill: '#0e1b18', 'font-weight': 600, 'text-anchor': L.anchor,
       });
       lb.textContent = L.name;
       svg.appendChild(lb);
@@ -897,22 +901,23 @@ export function initFleetLab(doc = document, win = window) {
   function renderDecay(model) {
     const svg = ui.decaySvg;
     svg.textContent = '';
-    const W = 480, H = 270, PAD = 44;
+    const W = isNarrow() ? 380 : 480, H = 270, PAD = 44;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     const all = model.decay.flatMap((d) => d.points.map((p) => p.indoorPm25));
     const maxY = Math.max(10, ...all) * 1.06;
     const mx = (min) => PAD + (min / 120) * (W - 2 * PAD);
     const my = (v) => H - PAD - (v / maxY) * (H - 2 * PAD);
 
-    svg.appendChild(svgEl(doc, 'text', { x: PAD, y: 20, 'font-size': 10, 'font-weight': 600, fill: '#43584f' })).textContent = 'ug/m3';
+    svg.appendChild(svgEl(doc, 'text', { x: PAD, y: 20, 'font-size': 11.5, 'font-weight': 600, fill: '#4a5753' })).textContent = 'ug/m3';
     for (let i = 0; i <= 4; i++) {
       const y = PAD + (i / 4) * (H - 2 * PAD);
-      svg.appendChild(svgEl(doc, 'line', { x1: PAD, y1: y, x2: W - PAD, y2: y, stroke: '#e2ece8', 'stroke-width': 1 }));
-      const t = svgEl(doc, 'text', { x: PAD - 6, y: y + 4, 'text-anchor': 'end', 'font-size': 10, fill: '#43584f' });
+      svg.appendChild(svgEl(doc, 'line', { x1: PAD, y1: y, x2: W - PAD, y2: y, stroke: '#e3e9e7', 'stroke-width': 1 }));
+      const t = svgEl(doc, 'text', { x: PAD - 6, y: y + 4, 'text-anchor': 'end', 'font-size': 11.5, fill: '#4a5753' });
       t.textContent = `${Math.round(maxY * (1 - i / 4))}`;
       svg.appendChild(t);
     }
     for (const min of [0, 30, 60, 90, 120]) {
-      const t = svgEl(doc, 'text', { x: mx(min), y: H - PAD + 16, 'text-anchor': 'middle', 'font-size': 10, fill: '#43584f' });
+      const t = svgEl(doc, 'text', { x: mx(min), y: H - PAD + 16, 'text-anchor': 'middle', 'font-size': 11.5, fill: '#4a5753' });
       t.textContent = `${min}m`;
       svg.appendChild(t);
     }
@@ -1095,6 +1100,7 @@ export function initFleetLab(doc = document, win = window) {
   bindExports();
   syncControls();
   render();
+  if (narrowQuery && typeof narrowQuery.addEventListener === 'function') narrowQuery.addEventListener('change', () => render());
   runTests();
   root.hidden = false;
   handle.runTests = runTests;

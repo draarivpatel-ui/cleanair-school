@@ -57,6 +57,9 @@ const els = {
   heroIndoorAqi: document.getElementById('hero-indoor-aqi'),
   heroIndoorPm: document.getElementById('hero-indoor-pm'),
   heroStatus: document.getElementById('hero-status'),
+  heroScale: document.getElementById('hero-scale'),
+  heroMarkOut: document.getElementById('hero-mark-out'),
+  heroMarkIn: document.getElementById('hero-mark-in'),
   btnDemo: document.getElementById('btn-demo'),
   btnHeroDemo: document.getElementById('btn-hero-demo'),
   btnRunBench: document.getElementById('btn-run-bench'),
@@ -64,6 +67,38 @@ const els = {
   btnExportJson: document.getElementById('btn-export-json'),
   btnPrint: document.getElementById('btn-print'),
 };
+
+// EPA 2024 AQI tier edges; the hero band draws six equal-width tiers.
+const AQI_EDGES = [0, 50, 100, 150, 200, 300, 500];
+const NARROW_QUERY = window.matchMedia('(max-width: 520px)');
+
+function aqiBandPct(aqi) {
+  const a = Math.min(500, Math.max(0, Number(aqi) || 0));
+  for (let i = 1; i < AQI_EDGES.length; i++) {
+    if (a <= AQI_EDGES[i]) {
+      const lo = AQI_EDGES[i - 1];
+      return (((i - 1) + (a - lo) / (AQI_EDGES[i] - lo)) / (AQI_EDGES.length - 1)) * 100;
+    }
+  }
+  return 100;
+}
+
+function placeMark(mark, aqi) {
+  const pct = aqiBandPct(aqi);
+  mark.hidden = false;
+  mark.style.left = `${pct.toFixed(2)}%`;
+  if (pct < 12) mark.dataset.edge = 'start';
+  else if (pct > 88) mark.dataset.edge = 'end';
+  else delete mark.dataset.edge;
+}
+
+function setCardState(valueEl, attrs) {
+  const card = valueEl.closest('.kpi-card');
+  if (!card) return;
+  delete card.dataset.state;
+  delete card.dataset.tone;
+  Object.assign(card.dataset, attrs);
+}
 
 function init() {
   for (const p of SCHOOL_PRESETS) {
@@ -94,6 +129,10 @@ function init() {
   els.btnCloseBench.addEventListener('click', () => { els.benchPanel.hidden = true; });
   els.btnExportJson.addEventListener('click', downloadPlanJson);
   els.btnPrint.addEventListener('click', () => window.print());
+  NARROW_QUERY.addEventListener('change', () => {
+    const out = state.lastOutput;
+    if (out) renderDecayChart(out.baseline.trajectory, out.upgraded.trajectory);
+  });
 
   loadPreset(SCHOOL_PRESETS[0].id);
 }
@@ -179,6 +218,12 @@ function blankResults(message) {
   els.heroCat.style.background = '';
   els.heroIndoorAqi.textContent = '-';
   els.heroIndoorPm.textContent = '';
+  delete els.heroAqi.dataset.tone;
+  delete els.heroIndoorAqi.dataset.tone;
+  els.heroMarkOut.hidden = true;
+  els.heroMarkIn.hidden = true;
+  els.heroScale.setAttribute('aria-label', 'EPA 2024 AQI scale. No reading available.');
+  for (const v of [els.kpiOutdoorAqi, els.kpiIndoorPm, els.kpiAch, els.kpiCfmPerson]) setCardState(v, {});
   els.inputStatus.textContent = state.hourlyWarn || message;
   els.heroStatus.textContent = message;
 }
@@ -241,6 +286,16 @@ function recompute() {
   els.heroAqi.style.color = '';
   els.heroIndoorAqi.textContent = `AQI ${upgraded.indoorSteadyAqi.aqi} ${upgraded.indoorSteadyAqi.category}`;
   els.heroIndoorPm.textContent = `${upgraded.steadyStatePm25} ug/m3 modeled steady state`;
+  els.heroAqi.dataset.tone = nowCast.key;
+  els.heroIndoorAqi.dataset.tone = upgraded.indoorSteadyAqi.key;
+  placeMark(els.heroMarkOut, nowCast.aqi);
+  placeMark(els.heroMarkIn, upgraded.indoorSteadyAqi.aqi);
+  els.heroScale.setAttribute('aria-label',
+    `EPA 2024 AQI scale: outdoor ${nowCast.beyondIndex ? '500+' : nowCast.aqi} ${nowCast.category}, modeled indoor ${upgraded.indoorSteadyAqi.aqi} ${upgraded.indoorSteadyAqi.category}.`);
+  setCardState(els.kpiOutdoorAqi, { tone: nowCast.key });
+  setCardState(els.kpiIndoorPm, { tone: upgraded.indoorSteadyAqi.key });
+  setCardState(els.kpiAch, { state: upgraded.meets5Ach ? 'ok' : 'warn' });
+  setCardState(els.kpiCfmPerson, { state: upgraded.meetsAshrae241 ? 'ok' : 'warn' });
   if (state.demoActive) {
     els.heroStatus.textContent = 'Modeled scenario: wildfire smoke plume arriving before morning recess. Every displayed value is an engineering projection, not a measured school pilot.';
   }
@@ -254,7 +309,10 @@ function renderDecayChart(baseTraj, upTraj) {
   const svg = els.decaySvg;
   svg.textContent = '';
   const ns = 'http://www.w3.org/2000/svg';
-  const W = 480, H = 260, PAD = 40;
+  const narrow = NARROW_QUERY.matches;
+  const W = narrow ? 360 : 480, H = narrow ? 250 : 260, PAD = narrow ? 36 : 42;
+  const FS = narrow ? 11.5 : 11;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   const maxY = Math.max(10, ...baseTraj.map((p) => p.indoorPm25), ...upTraj.map((p) => p.indoorPm25));
   const mapX = (min) => PAD + (min / 120) * (W - 2 * PAD);
   const mapY = (val) => H - PAD - (val / maxY) * (H - 2 * PAD);
@@ -264,45 +322,49 @@ function renderDecayChart(baseTraj, upTraj) {
     if (v >= 1000) return `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k`;
     return String(Math.round(v));
   };
-  const unit = svgEl(ns, 'text', { x: PAD, y: PAD - 12, 'font-size': '10', fill: '#43584f', 'font-weight': 600 });
-  unit.textContent = 'ug/m3';
+  const unit = svgEl(ns, 'text', { x: PAD - 6, y: PAD - 14, 'font-size': FS, fill: '#4a5753', 'font-weight': 650 });
+  unit.textContent = 'Indoor PM2.5, ug/m3';
   svg.appendChild(unit);
   for (let i = 0; i <= 4; i++) {
     const y = PAD + (i / 4) * (H - 2 * PAD);
-    svg.appendChild(svgEl(ns, 'line', { x1: PAD, y1: y, x2: W - PAD, y2: y, stroke: '#e2ece8', 'stroke-width': 1 }));
-    const t = svgEl(ns, 'text', { x: PAD - 6, y: y + 4, 'text-anchor': 'end', 'font-size': '10', fill: '#43584f' });
+    svg.appendChild(svgEl(ns, 'line', { x1: PAD, y1: y, x2: W - PAD, y2: y, stroke: i === 4 ? '#b8c5c0' : '#e3e9e7', 'stroke-width': 1 }));
+    const t = svgEl(ns, 'text', { x: PAD - 6, y: y + 4, 'text-anchor': 'end', 'font-size': FS, fill: '#4a5753' });
     t.textContent = fmtTick(maxY * (1 - i / 4));
     svg.appendChild(t);
   }
   const basePts = baseTraj.map((p) => `${mapX(p.minute).toFixed(1)},${mapY(p.indoorPm25).toFixed(1)}`).join(' ');
   const upPts = upTraj.map((p) => `${mapX(p.minute).toFixed(1)},${mapY(p.indoorPm25).toFixed(1)}`).join(' ');
-  svg.appendChild(svgEl(ns, 'polyline', { points: basePts, fill: 'none', stroke: '#94a3b8', 'stroke-width': 2.2, 'stroke-dasharray': '6 4' }));
-  svg.appendChild(svgEl(ns, 'polyline', { points: upPts, fill: 'none', stroke: '#0f766e', 'stroke-width': 3 }));
+  svg.appendChild(svgEl(ns, 'polyline', { points: basePts, fill: 'none', stroke: '#6b7785', 'stroke-width': 2, 'stroke-dasharray': '6 4', 'stroke-linejoin': 'round' }));
+  svg.appendChild(svgEl(ns, 'polyline', { points: upPts, fill: 'none', stroke: '#0d6b63', 'stroke-width': 3, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
   for (const p of baseTraj) {
-    const c = svgEl(ns, 'circle', { cx: mapX(p.minute), cy: mapY(p.indoorPm25), r: 2.6, fill: '#94a3b8' });
+    const c = svgEl(ns, 'circle', { cx: mapX(p.minute), cy: mapY(p.indoorPm25), r: 2.4, fill: '#6b7785' });
     const tip = svgEl(ns, 'title', {});
     tip.textContent = `${p.minute} min HVAC only: ${p.indoorPm25} ug/m3 (AQI ${p.indoorAqi})`;
     c.appendChild(tip);
     svg.appendChild(c);
   }
   for (const p of upTraj) {
-    const c = svgEl(ns, 'circle', { cx: mapX(p.minute), cy: mapY(p.indoorPm25), r: 3, fill: '#0f766e' });
+    const c = svgEl(ns, 'circle', { cx: mapX(p.minute), cy: mapY(p.indoorPm25), r: 3, fill: '#0d6b63', stroke: '#ffffff', 'stroke-width': 1 });
     const tip = svgEl(ns, 'title', {});
     tip.textContent = `${p.minute} min with cleaners: ${p.indoorPm25} ug/m3 (AQI ${p.indoorAqi})`;
     c.appendChild(tip);
     svg.appendChild(c);
   }
   for (const min of [0, 30, 60, 90, 120]) {
-    const t = svgEl(ns, 'text', { x: mapX(min), y: H - 14, 'text-anchor': 'middle', 'font-size': '10', fill: '#43584f' });
+    svg.appendChild(svgEl(ns, 'line', { x1: mapX(min), y1: H - PAD, x2: mapX(min), y2: H - PAD + 4, stroke: '#b8c5c0', 'stroke-width': 1 }));
+    const t = svgEl(ns, 'text', { x: mapX(min), y: H - PAD + 17, 'text-anchor': 'middle', 'font-size': FS, fill: '#4a5753' });
     t.textContent = `${min}m`;
     svg.appendChild(t);
   }
+  const xTitle = svgEl(ns, 'text', { x: W - PAD, y: H - 4, 'text-anchor': 'end', 'font-size': FS - 1, fill: '#4a5753' });
+  xTitle.textContent = 'minutes after intervention';
+  svg.appendChild(xTitle);
   const guide = svgEl(ns, 'g', { visibility: 'hidden', 'data-hover-layer': 'true' });
   guide.appendChild(svgEl(ns, 'line', {
-    'data-guide-line': 'true', x1: 0, y1: PAD, x2: 0, y2: H - PAD, stroke: '#0b4f49', 'stroke-width': 1, 'stroke-dasharray': '3 3',
+    'data-guide-line': 'true', x1: 0, y1: PAD, x2: 0, y2: H - PAD, stroke: '#08433e', 'stroke-width': 1, 'stroke-dasharray': '3 3',
   }));
-  guide.appendChild(svgEl(ns, 'circle', { 'data-guide-base': 'true', r: 5, fill: 'none', stroke: '#94a3b8', 'stroke-width': 2 }));
-  guide.appendChild(svgEl(ns, 'circle', { 'data-guide-up': 'true', r: 5.5, fill: 'none', stroke: '#0b4f49', 'stroke-width': 2.5 }));
+  guide.appendChild(svgEl(ns, 'circle', { 'data-guide-base': 'true', r: 5, fill: '#ffffff', stroke: '#6b7785', 'stroke-width': 2 }));
+  guide.appendChild(svgEl(ns, 'circle', { 'data-guide-up': 'true', r: 5.5, fill: '#ffffff', stroke: '#08433e', 'stroke-width': 2.5 }));
   svg.appendChild(guide);
   const hit = svgEl(ns, 'rect', {
     x: PAD, y: PAD, width: W - 2 * PAD, height: H - 2 * PAD, fill: 'transparent', 'pointer-events': 'all', 'data-hit-layer': 'true',
