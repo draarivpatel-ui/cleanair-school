@@ -1,4 +1,4 @@
-CleanAirSchool turns hourly PM2.5 readings into a recess decision a school nurse can act on in thirty seconds.
+CleanAirSchool turns hourly PM two point five readings into a recess decision a school nurse can act on in thirty seconds.
 The EPA 2024 air quality band sits above the fold, with outdoor air marked against the modeled indoor result.
 One click runs the wildfire classroom intervention demo.
 

@@ -12,27 +12,27 @@ Style: Cap,Helvetica,42,&H00FFFFFF,&H000019FF,&H88141414,&H00000000,-1,0,0,0,100
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Dialogue: 0,0:00:00.52,0:00:07.60,Cap,,0,0,0,,CleanAirSchool turns hourly PM2.5 readings into a recess decision a school nurse can act on in thirty seconds.
-Dialogue: 0,0:00:07.77,0:00:14.88,Cap,,0,0,0,,The EPA 2024 air quality band sits above the fold, with outdoor air marked against the modeled indoor result.
-Dialogue: 0,0:00:15.05,0:00:18.63,Cap,,0,0,0,,One click runs the wildfire classroom intervention demo.
-Dialogue: 0,0:00:19.25,0:00:24.83,Cap,,0,0,0,,A smoke plume builds across twelve hours, and the NowCast engine weights the newest readings most.
-Dialogue: 0,0:00:25.00,0:00:33.73,Cap,,0,0,0,,Outdoor air lands at AQI 167, Unhealthy, while one Corsi Rosenthal box holds the modeled classroom near AQI 30.
-Dialogue: 0,0:00:33.90,0:00:44.46,Cap,,0,0,0,,Four cards report the outdoor reading, the indoor steady state, delivered clean air changes, and fresh air flow per person against the ASHRAE 241 target.
-Dialogue: 0,0:00:45.08,0:00:51.52,Cap,,0,0,0,,The operations panel turns that number into decisions for recess, outdoor athletics, and asthma care.
-Dialogue: 0,0:00:51.69,0:00:56.18,Cap,,0,0,0,,Parent and staff notices print in English and Spanish, side by side.
-Dialogue: 0,0:00:56.80,0:01:03.37,Cap,,0,0,0,,Four scenarios cover the school day, from a bus drop off corridor spike to a gym hosting relocated PE.
-Dialogue: 0,0:01:03.54,0:01:09.97,Cap,,0,0,0,,Each preset reloads the room, the hourly series, and the cleaner stock, then every number recomputes.
-Dialogue: 0,0:01:10.59,0:01:17.34,Cap,,0,0,0,,The calculator prices real choices, a MERV upgrade, filter age, and up to twelve portable units.
-Dialogue: 0,0:01:17.51,0:01:22.47,Cap,,0,0,0,,Real world derates discount each extra unit and model a loaded filter at end of life.
-Dialogue: 0,0:01:23.09,0:01:27.35,Cap,,0,0,0,,The decay chart models two hours of classroom air with and without cleaners.
-Dialogue: 0,0:01:27.52,0:01:32.94,Cap,,0,0,0,,A pointer sweep reads every ten minute mark, and the same range slider works from the keyboard.
-Dialogue: 0,0:01:33.56,0:01:41.70,Cap,,0,0,0,,Bars compare delivered CADR and three year cost for a ninety dollar Corsi box, a classroom HEPA tower, and a commercial scrubber.
-Dialogue: 0,0:01:41.87,0:01:47.38,Cap,,0,0,0,,The budget panel equips twenty modeled classrooms and totals hardware plus filter replacements.
-Dialogue: 0,0:01:47.00,0:01:52.89,Cap,,0,0,0,,Verify EPA 2024 runs the breakpoint benchmark right in the page.
-Dialogue: 0,0:01:53.06,0:01:58.70,Cap,,0,0,0,,Thirteen of thirteen exact edge checks pass across all six federal tiers plus Beyond Index.
-Dialogue: 0,0:01:59.32,0:02:04.44,Cap,,0,0,0,,The fleet lab prices a whole school, five strategies across four smoke regimes.
-Dialogue: 0,0:02:04.61,0:02:11.93,Cap,,0,0,0,,A Pareto chart maps cost against delivered clean air, and every export carries a SHA 256 digest.
-Dialogue: 0,0:02:12.10,0:02:15.58,Cap,,0,0,0,,The tamper check shows a single changed dollar getting caught.
-Dialogue: 0,0:02:16.20,0:02:23.71,Cap,,0,0,0,,Twenty four in page self tests pass, and behind them four hundred eighteen Node tests plus thirteen eval checks guard the same math.
-Dialogue: 0,0:02:23.88,0:02:29.01,Cap,,0,0,0,,Every figure on screen is a labeled engineering projection, not a measured school pilot.
-Dialogue: 0,0:02:29.63,0:02:36.02,Cap,,0,0,0,,CleanAirSchool. Wildfire smoke outside, clean air inside, and the answer in thirty seconds.
+Dialogue: 0,0:00:00.52,0:00:09.25,Cap,,0,0,0,,CleanAirSchool turns hourly PM two point five readings into a recess decision a school nurse can act on in thirty seconds.
+Dialogue: 0,0:00:09.41,0:00:17.98,Cap,,0,0,0,,The EPA 2024 air quality band sits above the fold, with outdoor air marked against the modeled indoor result.
+Dialogue: 0,0:00:18.15,0:00:22.31,Cap,,0,0,0,,One click runs the wildfire classroom intervention demo.
+Dialogue: 0,0:00:22.93,0:00:29.98,Cap,,0,0,0,,A smoke plume builds across twelve hours, and the NowCast engine weights the newest readings most.
+Dialogue: 0,0:00:30.15,0:00:39.04,Cap,,0,0,0,,Outdoor air lands at AQI 167, Unhealthy, while one Corsi Rosenthal box holds the modeled classroom near AQI 30.
+Dialogue: 0,0:00:39.21,0:00:50.69,Cap,,0,0,0,,Four cards report the outdoor reading, the indoor steady state, delivered clean air changes, and fresh air flow per person against the ASHRAE 241 target.
+Dialogue: 0,0:00:51.32,0:00:58.64,Cap,,0,0,0,,The operations panel turns that number into decisions for recess, outdoor athletics, and asthma care.
+Dialogue: 0,0:00:58.81,0:01:03.66,Cap,,0,0,0,,Parent and staff notices print in English and Spanish, side by side.
+Dialogue: 0,0:01:04.28,0:01:11.45,Cap,,0,0,0,,Four scenarios cover the school day, from a bus drop off corridor spike to a gym hosting relocated PE.
+Dialogue: 0,0:01:11.62,0:01:18.82,Cap,,0,0,0,,Each preset reloads the room, the hourly series, and the cleaner stock, then every number recomputes.
+Dialogue: 0,0:01:19.44,0:01:26.25,Cap,,0,0,0,,The calculator prices real choices, a MERV upgrade, filter age, and up to twelve portable units.
+Dialogue: 0,0:01:26.42,0:01:32.42,Cap,,0,0,0,,Real world derates discount each extra unit and model a loaded filter at end of life.
+Dialogue: 0,0:01:33.04,0:01:38.53,Cap,,0,0,0,,The decay chart models two hours of classroom air with and without cleaners.
+Dialogue: 0,0:01:38.70,0:01:45.42,Cap,,0,0,0,,A pointer sweep reads every ten minute mark, and the same range slider works from the keyboard.
+Dialogue: 0,0:01:46.04,0:01:55.17,Cap,,0,0,0,,Bars compare delivered CADR and three year cost for a ninety dollar Corsi box, a classroom HEPA tower, and a commercial scrubber.
+Dialogue: 0,0:01:55.34,0:02:02.39,Cap,,0,0,0,,The budget panel equips twenty modeled classrooms and totals hardware plus filter replacements.
+Dialogue: 0,0:02:03.00,0:02:08.45,Cap,,0,0,0,,Verify EPA 2024 runs the breakpoint benchmark right in the page.
+Dialogue: 0,0:02:08.62,0:02:15.19,Cap,,0,0,0,,Thirteen of thirteen exact edge checks pass across all six federal tiers plus Beyond Index.
+Dialogue: 0,0:02:15.81,0:02:21.50,Cap,,0,0,0,,The fleet lab prices a whole school, five strategies across four smoke regimes.
+Dialogue: 0,0:02:21.67,0:02:29.07,Cap,,0,0,0,,A Pareto chart maps cost against delivered clean air, and every export carries a SHA 256 digest.
+Dialogue: 0,0:02:29.24,0:02:33.77,Cap,,0,0,0,,The tamper check shows a single changed dollar getting caught.
+Dialogue: 0,0:02:34.39,0:02:43.75,Cap,,0,0,0,,Twenty four in page self tests pass, and behind them four hundred eighteen Node tests plus thirteen eval checks guard the same math.
+Dialogue: 0,0:02:43.92,0:02:50.29,Cap,,0,0,0,,Every figure on screen is a labeled engineering projection, not a measured school pilot.
+Dialogue: 0,0:02:50.91,0:02:57.47,Cap,,0,0,0,,CleanAirSchool. Wildfire smoke outside, clean air inside, and the answer in thirty seconds.
