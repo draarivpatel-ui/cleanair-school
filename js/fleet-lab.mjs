@@ -903,7 +903,6 @@ export function initFleetLab(doc = document, win = window) {
         cx, cy, r: 6.5,
         fill: STRATEGY_COLORS[p.strategyId] || '#0f766e', stroke: '#ffffff', 'stroke-width': 2,
         tabindex: 0, role: 'img', 'data-strategy': p.strategyId,
-        'aria-pressed': isSel ? 'true' : 'false',
       });
       c.appendChild(svgEl(doc, 'title', {})).textContent =
         `${p.name}: ${p.cleanAch} clean ACH, $${p.school3YearUsd.toLocaleString('en-US')} over 3 years`;

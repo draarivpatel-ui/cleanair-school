@@ -381,9 +381,10 @@ function renderDecayChart(baseTraj, upTraj) {
     }
     const endX = mapX(120) + 6;
     const eb = svgEl(ns, 'text', { x: endX, y: yb, 'font-size': FS, fill: '#4a5753', 'font-weight': 650, 'data-end-label': 'base' });
-    eb.textContent = fmtTick(lastBase.indoorPm25);
+    const fmtEnd = (v) => (v >= 100 && v < 1000 ? String(Math.round(v)) : fmtTick(v));
+    eb.textContent = fmtEnd(lastBase.indoorPm25);
     const eu = svgEl(ns, 'text', { x: endX, y: yu, 'font-size': FS, fill: '#08433e', 'font-weight': 750, 'data-end-label': 'up' });
-    eu.textContent = fmtTick(lastUp.indoorPm25);
+    eu.textContent = fmtEnd(lastUp.indoorPm25);
     svg.append(eb, eu);
   }
   for (const min of [0, 30, 60, 90, 120]) {
