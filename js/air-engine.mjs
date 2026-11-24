@@ -201,7 +201,11 @@ export function evaluateClassroomAir(input = {}) {
   const useDerates = input.applyDerates === true;
   const daysSinceReplacement = Math.max(0, finiteOr(input.daysSinceReplacement, 0));
   const lifecycle = filterLifecycle(cleaner, daysSinceReplacement);
-  const loadFraction = useDerates ? finiteOr(input.filterLoadFraction, lifecycle.loadFraction) : 0;
+  const rawLoadFraction = useDerates ? finiteOr(input.filterLoadFraction, lifecycle.loadFraction) : 0;
+  const loadFraction = Math.min(1, Math.max(0, rawLoadFraction));
+  if (useDerates && rawLoadFraction !== loadFraction) {
+    warnings.push('filterLoadFraction clamped to the 0..1 service-life domain');
+  }
   const derates = useDerates
     ? portableCadrWithDerates(cleaner, cleanerCount, loadFraction)
     : { effectiveCfm: cleaner.cadrCfm * cleanerCount, nameplateCfm: cleaner.cadrCfm * cleanerCount, placementFactor: 1, loadingFactor: 1 };
@@ -241,12 +245,18 @@ export function evaluateClassroomAir(input = {}) {
   const unitCfm = sizingCleaner.cadrCfm;
   const gapAch5 = Math.max(0, 5.0 - hvacCleanAch);
   let unitsFor5Ach = Math.ceil(((gapAch5 * volumeFt3) / 60) / unitCfm);
+  let unitsFor5AchCapped = false;
   if (useDerates) {
     unitsFor5Ach = 0;
-    while (unitsFor5Ach < 64) {
+    while (unitsFor5Ach <= 64) {
       const d = portableCadrWithDerates(sizingCleaner, unitsFor5Ach, loadFraction);
       if (hvacCleanAch + (d.effectiveCfm * 60) / volumeFt3 >= 5.0) break;
       unitsFor5Ach += 1;
+    }
+    if (unitsFor5Ach > 64) {
+      unitsFor5Ach = 64;
+      unitsFor5AchCapped = true;
+      warnings.push('5 ACH unit sizing reached the 64-unit feasibility cap');
     }
   }
 
@@ -278,6 +288,7 @@ export function evaluateClassroomAir(input = {}) {
     meets5Ach: deliveredCleanAch >= 5.0,
     meetsAshrae241: cfmPerPerson >= ashrae241ClassroomTargetCfmPerPerson,
     unitsFor5Ach,
+    unitsFor5AchCapped,
     steadyStatePm25: Number(steadyStatePm25.toFixed(1)),
     indoorSteadyAqi,
     indoorReductionPct,

@@ -219,3 +219,25 @@ test('wave2: compare caption documents effective CADR scaling', () => {
 test('wave2: budget note discloses the none-selected CR reference', () => {
   assert.match(appJs, /No cleaner selected above; shown as a Corsi-Rosenthal reference/);
 });
+
+test('wave2: filter load fraction is clamped and hostile values are surfaced as warnings', () => {
+  const room = { lengthFt: 30, widthFt: 28, heightFt: 10, hvacAch: 1, mervRating: 'merv13', cleanerId: 'corsi_box', applyDerates: true, cleanerCount: 2, outdoorPm25: 50 };
+  const negative = evaluateClassroomAir({ ...room, filterLoadFraction: -4 });
+  const excessive = evaluateClassroomAir({ ...room, filterLoadFraction: 99 });
+  assert.equal(negative.filterLoadFraction, 0);
+  assert.equal(excessive.filterLoadFraction, 1);
+  assert.ok(negative.inputWarnings.some((w) => w.includes('filterLoadFraction clamped')));
+  assert.ok(excessive.inputWarnings.some((w) => w.includes('filterLoadFraction clamped')));
+  assert.ok(excessive.effectivePortableCfm < evaluateClassroomAir({ ...room, filterLoadFraction: 0 }).effectivePortableCfm);
+});
+
+test('wave2: derated 5 ACH sizing tests 64 units and marks impossible rooms honestly', () => {
+  const impossible = evaluateClassroomAir({
+    lengthFt: 200, widthFt: 200, heightFt: 40, hvacAch: 0, mervRating: 'merv8',
+    cleanerId: 'classroom_hepa', cleanerCount: 0, applyDerates: true, filterLoadFraction: 1,
+    outdoorPm25: 50,
+  });
+  assert.equal(impossible.unitsFor5Ach, 64);
+  assert.equal(impossible.unitsFor5AchCapped, true);
+  assert.ok(impossible.inputWarnings.some((w) => w.includes('64-unit feasibility cap')));
+});

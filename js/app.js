@@ -265,7 +265,9 @@ function recompute() {
   const unitSuffix = state.preset.room.cleanerId === 'none' ? ' (Corsi-class)' : '';
   els.kpiUnitsNeeded.textContent = upgraded.meets5Ach
     ? 'Meets 5.0+ ACH clean-air target'
-    : `Needs ${upgraded.unitsFor5Ach} units total${unitSuffix} for 5.0 ACH`;
+    : upgraded.unitsFor5AchCapped
+      ? `Exceeds the 64-unit feasibility cap${unitSuffix} for 5.0 ACH`
+      : `Needs ${upgraded.unitsFor5Ach} units total${unitSuffix} for 5.0 ACH`;
   els.kpiCfmPerson.textContent = `${upgraded.cfmPerPerson} CFM/p`;
   els.kpiAshraeStatus.textContent = upgraded.meetsAshrae241
     ? 'Meets ASHRAE 241 (40 CFM/person)'
