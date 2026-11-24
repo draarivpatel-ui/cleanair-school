@@ -71,8 +71,9 @@ body {
   padding: 9px 14px; border-radius: 8px; border: 1px solid var(--border-strong);
   background: var(--surface); color: var(--ink); cursor: pointer;
   min-height: 40px;
-  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease, transform 90ms ease;
 }
+.btn:active { transform: translateY(1px); }
 .btn:hover { border-color: var(--accent); background: var(--surface-sunk); }
 .btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .btn-icon { width: 17px; height: 17px; flex: none; }
@@ -249,6 +250,10 @@ body {
   width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px;
   background: var(--surface-sunk); display: block; margin-bottom: 8px; cursor: crosshair; touch-action: pan-y;
 }
+/* Chart text gets a halo in the plot background so labels stay legible over grid lines and curves. */
+.decay-svg text, .fl-svg text {
+  paint-order: stroke; stroke: var(--surface-sunk); stroke-width: 3.5px; stroke-linejoin: round;
+}
 .decay-minute-label { display: block; font-size: 0.82rem; font-weight: 650; color: var(--ink-muted); }
 .decay-minute { display: block; width: 100%; min-height: 32px; margin: 0 0 6px; accent-color: var(--accent); }
 .decay-minute:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
@@ -311,14 +316,16 @@ body {
   border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface);
   color: var(--ink); cursor: pointer; min-height: 38px;
 }
+.fl-regime { transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 90ms ease; }
 .fl-regime:hover { border-color: var(--accent); }
+.fl-regime:active { transform: translateY(1px); }
 .fl-regime[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
 .fl-regime:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .fleet-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
 .fleet-inputs .field { min-width: 104px; }
 .fleet-inputs .check-field { min-height: 40px; align-items: center; }
 .fleet-inputs .check-field input { margin-top: 0; }
-.fleet-table tbody tr { cursor: pointer; }
+.fleet-table tbody tr { cursor: pointer; transition: background-color 120ms ease; }
 .fleet-table tbody tr:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
 .fleet-table tbody tr.fl-selected { background: var(--accent-soft); }
 .fleet-table tbody tr.fl-selected td:first-child { font-weight: 700; color: var(--accent-deep); }
@@ -333,10 +340,19 @@ body {
 .fleet-chart figcaption { font-size: 0.86rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
 .fl-svg { width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-sunk); display: block; }
 .fl-svg circle { cursor: pointer; }
+.fl-svg circle[data-strategy] { transition: stroke-width 120ms ease; }
+.fl-svg circle[data-strategy]:hover { stroke-width: 3.5px; }
+.table-scroll + .muted-note { margin-top: 10px; }
 .fl-svg circle:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .fl-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 0; padding: 0; font-size: 0.8rem; color: var(--ink-muted); }
 .fl-legend li { display: flex; align-items: center; gap: 6px; }
-.fl-legend-swatch { width: 14px; height: 4px; border-radius: 2px; display: inline-block; }
+.fl-legend-swatch { width: 16px; height: 4px; border-radius: 2px; display: inline-block; }
+.fl-legend-swatch-dash {
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 8px);
+  mask: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 8px);
+}
+.fl-legend li.is-selected { color: var(--ink); font-weight: 700; }
+.fl-legend li.is-selected .fl-legend-swatch { height: 5px; }
 .fleet-export { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 4px; }
 .fl-digest-line { font-size: 0.8rem; color: var(--ink-muted); margin: 0 0 10px; word-break: break-all; }
 .fl-digest-line code { font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink); background: var(--surface-alt); padding: 2px 6px; border-radius: 4px; }
@@ -368,7 +384,7 @@ body {
 @media (max-width: 1080px) {
   .workspace, .visual-grid, .compare-grid { grid-template-columns: 1fr; }
   .hero { grid-template-columns: 1fr; }
-  .hero-visual { max-width: 640px; }
+  .hero-visual { max-width: none; }
   .kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inputs-panel { order: 2; position: static; max-height: none; overflow: visible; }
   .main-col { order: 1; }
@@ -410,6 +426,8 @@ body {
   .fleet-inputs .field { min-width: 0; flex: 1 1 30%; }
 }
 
+@page { margin: 12mm; }
+
 @media print {
   .no-print { display: none !important; }
   .fleet-lab { display: none !important; }
@@ -422,11 +440,19 @@ body {
   .hero-gauge-value { color: #10201a; }
   .hero-gauge-clean .hero-gauge-value { color: #14532d; }
   .hero-visual { background: #fff; border-color: #b8c5c0; box-shadow: none; margin-top: 10px; break-inside: avoid; }
-  .aqi-band-track, .kpi-card::before, .badge, .hero-chip, .fl-chip { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .aqi-band-track, .kpi-card::before, .badge, .hero-chip, .fl-chip,
+  .compare-track, .compare-fill, .budget-row.total, .bench-summary, .notices-box {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .compare-track { border: 1px solid #b8c5c0; }
   .panel, .kpi-card { box-shadow: none; break-inside: avoid; }
-  .decay-svg { max-width: 520px; }
+  .decay-svg { max-width: 560px; background: #fff; }
+  .decay-svg text { stroke: #fff; }
   .decay-minute, .decay-minute-label { display: none; }
   .decay-readout { color: #10201a; background: #fff; padding: 0; }
   .workspace { grid-template-columns: 1fr; padding: 0; }
-  .visual-grid, .compare-grid { grid-template-columns: 1fr 1fr; }
+  .visual-grid { grid-template-columns: 1fr; }
+  .compare-grid { grid-template-columns: 1fr 1fr; }
+  .main-col, .visual-grid, .compare-grid { gap: 10px; }
+  .footer { padding: 10px 0 0; }
 }

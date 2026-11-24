@@ -672,6 +672,15 @@ export function runFleetSelfTests() {
 /* 7) DOM initializer                                                  */
 /* ------------------------------------------------------------------ */
 
+// Phone-width Pareto labels; the full names stay in the point tooltips and the table.
+const SHORT_STRATEGY_NAMES = Object.freeze({
+  'merv8-baseline': 'MERV 8',
+  'merv13-hvac': 'MERV 13',
+  'cr-box-fleet': 'CR boxes',
+  'classroom-hepa-fleet': 'HEPA towers',
+  'hybrid-merv13-cr': 'Hybrid',
+});
+
 const STRATEGY_COLORS = Object.freeze({
   'merv8-baseline': '#64748b',
   'merv13-hvac': '#ca8a04',
@@ -679,6 +688,15 @@ const STRATEGY_COLORS = Object.freeze({
   'classroom-hepa-fleet': '#7e22ce',
   'hybrid-merv13-cr': '#0369a1',
 });
+
+// Round axis maximum and step (1, 2, 2.5, 5 x 10^n) so ticks read as plain numbers.
+function niceAxis(rawMax, target = 4) {
+  const raw = Math.max(rawMax, 1e-6) / target;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= raw - 1e-9);
+  const count = Math.max(1, Math.ceil(rawMax / step - 1e-9));
+  return { step, max: count * step, count };
+}
 
 function svgEl(doc, tag, attrs) {
   const el = doc.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -798,42 +816,59 @@ export function initFleetLab(doc = document, win = window) {
   function renderPareto(model) {
     const svg = ui.paretoSvg;
     svg.textContent = '';
-    const W = isNarrow() ? 380 : 460, H = isNarrow() ? 300 : 280, PAD = 52;
+    const narrow = isNarrow();
+    const W = narrow ? 340 : 580, H = narrow ? 300 : 340;
+    const L = narrow ? 46 : 56, R = narrow ? 14 : 22, T = 40, B = 48;
+    const FS = narrow ? 11 : 12;
+    const LFS = narrow ? 10.5 : 11.5;
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     const pts = model.pareto.points;
-    const maxX = Math.max(8, ...pts.map((p) => p.cleanAch), model.pareto.ashrae241EquivAch) * 1.08;
-    const maxY = Math.max(1000, ...pts.map((p) => p.school3YearUsd)) * 1.12;
-    const mx = (v) => PAD + (v / maxX) * (W - 2 * PAD);
-    const my = (v) => H - PAD - (v / maxY) * (H - 2 * PAD);
+    const xAxis = niceAxis(Math.max(8, ...pts.map((p) => p.cleanAch), model.pareto.ashrae241EquivAch) * 1.04);
+    const yAxis = niceAxis(Math.max(1000, ...pts.map((p) => p.school3YearUsd)) * 1.08);
+    const maxX = xAxis.max, maxY = yAxis.max;
+    const mx = (v) => L + (v / maxX) * (W - L - R);
+    const my = (v) => H - B - (v / maxY) * (H - T - B);
+    const usd = (v) => (v < 1000 ? `$${Math.round(v)}` : `$${Number((v / 1000).toFixed(1))}k`);
 
-    svg.appendChild(svgEl(doc, 'text', { x: PAD, y: 20, 'font-size': 11.5, 'font-weight': 600, fill: '#4a5753' })).textContent = 'USD, 3-year school total';
-    for (let i = 0; i <= 4; i++) {
-      const y = PAD + (i / 4) * (H - 2 * PAD);
-      svg.appendChild(svgEl(doc, 'line', { x1: PAD, y1: y, x2: W - PAD, y2: y, stroke: '#e3e9e7', 'stroke-width': 1 }));
-      const t = svgEl(doc, 'text', { x: PAD - 6, y: y + 4, 'text-anchor': 'end', 'font-size': 11.5, fill: '#4a5753' });
-      t.textContent = `$${Math.round(maxY * (1 - i / 4) / 1000)}k`;
+    svg.appendChild(svgEl(doc, 'text', { x: L - 6, y: T - 18, 'font-size': FS, 'font-weight': 650, fill: '#4a5753' })).textContent = 'USD, 3-year school total';
+    for (let i = 0; i <= yAxis.count; i++) {
+      const v = yAxis.step * i;
+      const y = my(v);
+      svg.appendChild(svgEl(doc, 'line', { x1: L, y1: y, x2: W - R, y2: y, stroke: i === 0 ? '#9aa9a4' : '#e3e9e7', 'stroke-width': 1 }));
+      const t = svgEl(doc, 'text', { x: L - 6, y: y + 4, 'text-anchor': 'end', 'font-size': FS, fill: '#4a5753' });
+      t.textContent = usd(v);
       svg.appendChild(t);
-      const x = PAD + (i / 4) * (W - 2 * PAD);
-      const xt = svgEl(doc, 'text', { x, y: H - PAD + 16, 'text-anchor': 'middle', 'font-size': 11.5, fill: '#4a5753' });
-      xt.textContent = `${(maxX * i / 4).toFixed(1)}`;
+    }
+    for (let i = 0; i <= xAxis.count; i++) {
+      const v = xAxis.step * i;
+      const x = mx(v);
+      svg.appendChild(svgEl(doc, 'line', { x1: x, y1: H - B, x2: x, y2: H - B + 4, stroke: '#9aa9a4', 'stroke-width': 1 }));
+      const xt = svgEl(doc, 'text', { x, y: H - B + 17, 'text-anchor': 'middle', 'font-size': FS, fill: '#4a5753' });
+      xt.textContent = Number.isInteger(v) ? String(v) : v.toFixed(1);
       svg.appendChild(xt);
     }
-    const axl = svgEl(doc, 'text', { x: W / 2, y: H - 8, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 600, fill: '#4a5753' });
+    const axl = svgEl(doc, 'text', { x: L + (W - L - R) / 2, y: H - 8, 'text-anchor': 'middle', 'font-size': FS, 'font-weight': 650, fill: '#4a5753' });
     axl.textContent = 'Delivered clean ACH (fresh filters)';
     svg.appendChild(axl);
 
+    // ASHRAE 241 target: dashed vertical line with its label at the top of the plot.
     const targetX = mx(model.pareto.ashrae241EquivAch);
     svg.appendChild(svgEl(doc, 'line', {
-      x1: targetX, y1: PAD, x2: targetX, y2: H - PAD, stroke: '#a85d0a', 'stroke-width': 1.6, 'stroke-dasharray': '5 4',
+      x1: targetX, y1: T - 6, x2: targetX, y2: H - B, stroke: '#a85d0a', 'stroke-width': 1.6, 'stroke-dasharray': '5 4',
     }));
-    const targetText = `ASHRAE 241: 40 CFM/person ~ ${model.pareto.ashrae241EquivAch} ACH`;
-    const targetAnchorEnd = targetX - 6 - targetText.length * 6.1 >= PAD;
+    const targetText = narrow
+      ? `ASHRAE 241 ~ ${model.pareto.ashrae241EquivAch} ACH`
+      : `ASHRAE 241: 40 CFM/person ~ ${model.pareto.ashrae241EquivAch} ACH`;
+    const targetW = targetText.length * LFS * 0.56;
+    const targetAnchorEnd = targetX - 6 - targetW >= L || targetX + 6 + targetW > W - R;
     const tl = svgEl(doc, 'text', {
       x: targetAnchorEnd ? targetX - 6 : targetX + 6,
-      y: H - PAD - 5, 'font-size': 10.5, fill: '#8a4b06', 'font-weight': 700,
+      y: T + 6, 'font-size': LFS, fill: '#8a4b06', 'font-weight': 700,
       'text-anchor': targetAnchorEnd ? 'end' : 'start',
     });
     tl.textContent = targetText;
+    tl.appendChild(svgEl(doc, 'title', {})).textContent =
+      `ASHRAE 241: 40 CFM/person ~ ${model.pareto.ashrae241EquivAch} ACH`;
     svg.appendChild(tl);
 
     const fr = model.pareto.frontier;
@@ -841,59 +876,87 @@ export function initFleetLab(doc = document, win = window) {
       const line = fr.map((p) => `${mx(p.cleanAch).toFixed(1)},${my(p.school3YearUsd).toFixed(1)}`).join(' ');
       svg.appendChild(svgEl(doc, 'polyline', { points: line, fill: 'none', stroke: '#0d6b63', 'stroke-width': 2, 'stroke-dasharray': '7 4', opacity: 0.7 }));
     }
+    // Real rendered width when the SVG is laid out; a conservative estimate otherwise.
+    const measureText = (text, weight) => {
+      const probe = svgEl(doc, 'text', { x: 0, y: -20, 'font-size': LFS, 'font-weight': weight, visibility: 'hidden' });
+      probe.textContent = text;
+      svg.appendChild(probe);
+      let w = 0;
+      try { w = typeof probe.getComputedTextLength === 'function' ? probe.getComputedTextLength() : 0; } catch { w = 0; }
+      probe.remove();
+      return (w > 0 ? w : text.length * LFS * 0.62) + 2;
+    };
+    const selectedId = model.state.strategy;
+    const pick = (id) => { handle.state = normalizeFleetState({ ...handle.state, strategy: id }); render(); };
     const labels = [];
+    const dots = [];
     for (const p of pts) {
+      const cx = mx(p.cleanAch), cy = my(p.school3YearUsd);
+      const isSel = p.strategyId === selectedId;
+      if (isSel) {
+        svg.appendChild(svgEl(doc, 'circle', {
+          cx, cy, r: 11, fill: 'none', stroke: STRATEGY_COLORS[p.strategyId] || '#0f766e', 'stroke-width': 2, opacity: 0.55,
+          'data-selected-ring': 'true', 'pointer-events': 'none',
+        }));
+      }
       const c = svgEl(doc, 'circle', {
-        cx: mx(p.cleanAch), cy: my(p.school3YearUsd), r: 6,
-        fill: STRATEGY_COLORS[p.strategyId] || '#0f766e',
+        cx, cy, r: 6.5,
+        fill: STRATEGY_COLORS[p.strategyId] || '#0f766e', stroke: '#ffffff', 'stroke-width': 2,
         tabindex: 0, role: 'img', 'data-strategy': p.strategyId,
+        'aria-pressed': isSel ? 'true' : 'false',
       });
       c.appendChild(svgEl(doc, 'title', {})).textContent =
         `${p.name}: ${p.cleanAch} clean ACH, $${p.school3YearUsd.toLocaleString('en-US')} over 3 years`;
-      c.addEventListener('click', () => { handle.state = normalizeFleetState({ ...handle.state, strategy: p.strategyId }); render(); });
+      c.addEventListener('click', () => pick(p.strategyId));
       c.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handle.state = normalizeFleetState({ ...handle.state, strategy: p.strategyId }); render(); }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(p.strategyId); }
       });
       svg.appendChild(c);
-      labels.push({
-        name: p.name,
-        x: mx(p.cleanAch) > W - PAD - 104 ? mx(p.cleanAch) - 9 : mx(p.cleanAch) + 9,
-        y: my(p.school3YearUsd) - 7,
-        anchor: mx(p.cleanAch) > W - PAD - 104 ? 'end' : 'start',
-        w: p.name.length * 6.1,
-      });
+      const name = narrow ? (SHORT_STRATEGY_NAMES[p.strategyId] || p.name) : p.name;
+      dots.push({ x: cx, y: cy, name, isSel, w: measureText(name, isSel ? 750 : 600) });
     }
-    // Stagger labels that would overlap: same y-band and crossing x-ranges.
-    // The target-line label is a reserved box; point labels bump up instead.
-    const tL = targetAnchorEnd ? targetX - 6 - targetText.length * 6.1 : targetX + 6;
-    const reserved = [{ l: tL, r: tL + targetText.length * 6.1, y: H - PAD - 5 }];
-    let bumped = true;
-    for (let guard = 0; bumped && guard < 24; guard++) {
-      bumped = false;
-      for (let i = 0; i < labels.length; i++) {
-        for (let j = i + 1; j < labels.length; j++) {
-          const a = labels[i], b = labels[j];
-          if (Math.abs(a.y - b.y) >= 12.5) continue;
-          const aL = a.anchor === 'end' ? a.x - a.w : a.x;
-          const bL = b.anchor === 'end' ? b.x - b.w : b.x;
-          if (aL + a.w > bL && bL + b.w > aL) { b.y += 13; bumped = true; }
-        }
+    // Place each label at the first free spot around its own point (above,
+    // below, then beside), inside the plot, clear of other labels, points and
+    // the target label. With no free spot, take the least-overlapping one.
+    const boxOf = (c) => {
+      const left = c.anchor === 'end' ? c.x - c.w : c.x;
+      return { l: left, r: left + c.w, t: c.y - LFS + 1, b: c.y + 3 };
+    };
+    const overlap = (p, q) => Math.max(0, Math.min(p.r, q.r) - Math.max(p.l, q.l)) * Math.max(0, Math.min(p.b, q.b) - Math.max(p.t, q.t));
+    const tBox = { l: targetAnchorEnd ? targetX - 6 - targetW : targetX + 6, r: targetAnchorEnd ? targetX - 6 : targetX + 6 + targetW, t: T + 6 - LFS, b: T + 9 };
+    const dotBoxes = dots.map((d) => ({ l: d.x - 8, r: d.x + 8, t: d.y - 8, b: d.y + 8 }));
+    const placed = [];
+    const order = dots.map((d, i) => i).sort((i, j) => (dots[j].isSel - dots[i].isSel));
+    for (const i of order) {
+      const d = dots[i];
+      const cands = [];
+      for (const lift of [0, LFS + 2, 2 * (LFS + 2)]) {
+        cands.push(
+          { x: d.x + 9, y: d.y - 9 - lift, anchor: 'start' },
+          { x: d.x - 9, y: d.y - 9 - lift, anchor: 'end' },
+          { x: d.x + 9, y: d.y + 6 + LFS + lift, anchor: 'start' },
+          { x: d.x - 9, y: d.y + 6 + LFS + lift, anchor: 'end' },
+        );
+        if (lift === 0) cands.push({ x: d.x + 12, y: d.y + LFS * 0.35, anchor: 'start' }, { x: d.x - 12, y: d.y + LFS * 0.35, anchor: 'end' });
       }
-      for (const L of labels) {
-        const lL = L.anchor === 'end' ? L.x - L.w : L.x;
-        for (const res of reserved) {
-          if (Math.abs(L.y - res.y) < 12.5 && lL + L.w > res.l && res.r > lL) {
-            L.y -= 13;
-            bumped = true;
-          }
-        }
+      let best = null;
+      for (const c of cands) {
+        const bx = boxOf({ ...c, w: d.w });
+        const outside = Math.max(0, L + 2 - bx.l) + Math.max(0, bx.r - (W - R)) + Math.max(0, T - 4 - bx.t) + Math.max(0, bx.b - (H - B));
+        let cost = outside * 1000;
+        for (const q of [tBox, ...dotBoxes.filter((_, k) => k !== i), ...placed]) cost += overlap(bx, q);
+        if (!best || cost < best.cost) best = { ...c, cost, box: bx };
+        if (cost === 0) break;
       }
+      placed.push(best.box);
+      labels.push({ name: d.name, isSel: d.isSel, x: best.x, y: best.y, anchor: best.anchor });
     }
-    for (const L of labels) {
+    for (const lbData of labels) {
       const lb = svgEl(doc, 'text', {
-        x: L.x, y: L.y, 'font-size': 10.5, fill: '#0e1b18', 'font-weight': 600, 'text-anchor': L.anchor,
+        x: lbData.x, y: lbData.y, 'font-size': LFS, fill: lbData.isSel ? '#08433e' : '#0e1b18',
+        'font-weight': lbData.isSel ? 750 : 600, 'text-anchor': lbData.anchor, 'pointer-events': 'none',
       });
-      lb.textContent = L.name;
+      lb.textContent = lbData.name;
       svg.appendChild(lb);
     }
   }
@@ -901,39 +964,50 @@ export function initFleetLab(doc = document, win = window) {
   function renderDecay(model) {
     const svg = ui.decaySvg;
     svg.textContent = '';
-    const W = isNarrow() ? 380 : 480, H = 270, PAD = 44;
+    const narrow = isNarrow();
+    const W = narrow ? 340 : 580, H = narrow ? 270 : 320;
+    const L = narrow ? 40 : 48, R = narrow ? 14 : 22, T = 36, B = 36;
+    const FS = narrow ? 11 : 12;
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     const all = model.decay.flatMap((d) => d.points.map((p) => p.indoorPm25));
-    const maxY = Math.max(10, ...all) * 1.06;
-    const mx = (min) => PAD + (min / 120) * (W - 2 * PAD);
-    const my = (v) => H - PAD - (v / maxY) * (H - 2 * PAD);
+    const yAxis = niceAxis(Math.max(10, ...all));
+    const maxY = yAxis.max;
+    const mx = (min) => L + (min / 120) * (W - L - R);
+    const my = (v) => H - B - (v / maxY) * (H - T - B);
 
-    svg.appendChild(svgEl(doc, 'text', { x: PAD, y: 20, 'font-size': 11.5, 'font-weight': 600, fill: '#4a5753' })).textContent = 'ug/m3';
-    for (let i = 0; i <= 4; i++) {
-      const y = PAD + (i / 4) * (H - 2 * PAD);
-      svg.appendChild(svgEl(doc, 'line', { x1: PAD, y1: y, x2: W - PAD, y2: y, stroke: '#e3e9e7', 'stroke-width': 1 }));
-      const t = svgEl(doc, 'text', { x: PAD - 6, y: y + 4, 'text-anchor': 'end', 'font-size': 11.5, fill: '#4a5753' });
-      t.textContent = `${Math.round(maxY * (1 - i / 4))}`;
+    svg.appendChild(svgEl(doc, 'text', { x: L - 6, y: T - 16, 'font-size': FS, 'font-weight': 650, fill: '#4a5753' })).textContent = 'Indoor PM2.5, ug/m3';
+    for (let i = 0; i <= yAxis.count; i++) {
+      const v = yAxis.step * i;
+      const y = my(v);
+      svg.appendChild(svgEl(doc, 'line', { x1: L, y1: y, x2: W - R, y2: y, stroke: i === 0 ? '#9aa9a4' : '#e3e9e7', 'stroke-width': 1 }));
+      const t = svgEl(doc, 'text', { x: L - 6, y: y + 4, 'text-anchor': 'end', 'font-size': FS, fill: '#4a5753' });
+      t.textContent = Number.isInteger(v) ? String(v) : v.toFixed(1);
       svg.appendChild(t);
     }
     for (const min of [0, 30, 60, 90, 120]) {
-      const t = svgEl(doc, 'text', { x: mx(min), y: H - PAD + 16, 'text-anchor': 'middle', 'font-size': 11.5, fill: '#4a5753' });
+      svg.appendChild(svgEl(doc, 'line', { x1: mx(min), y1: H - B, x2: mx(min), y2: H - B + 4, stroke: '#9aa9a4', 'stroke-width': 1 }));
+      const t = svgEl(doc, 'text', { x: mx(min), y: H - B + 17, 'text-anchor': 'middle', 'font-size': FS, fill: '#4a5753' });
       t.textContent = `${min}m`;
       svg.appendChild(t);
     }
-    for (const curve of model.decay) {
+    // Draw the selected strategy last so it sits on top of overlapping curves.
+    const ordered = [...model.decay].sort((a, b) =>
+      (a.strategyId === model.state.strategy) - (b.strategyId === model.state.strategy));
+    for (const curve of ordered) {
       const color = STRATEGY_COLORS[curve.strategyId] || '#0f766e';
+      const isSel = curve.strategyId === model.state.strategy;
       const dash = curve.strategyId === 'merv8-baseline' ? { 'stroke-dasharray': '6 4' } : {};
       const pts = curve.points.map((p) => `${mx(p.minute).toFixed(1)},${my(p.indoorPm25).toFixed(1)}`).join(' ');
       svg.appendChild(svgEl(doc, 'polyline', {
         points: pts, fill: 'none', stroke: color,
-        'stroke-width': curve.strategyId === model.state.strategy ? 3.4 : 2,
-        opacity: curve.strategyId === model.state.strategy ? 1 : 0.75, ...dash,
+        'stroke-width': isSel ? 3.6 : 2,
+        opacity: isSel ? 1 : 0.6, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', ...dash,
       }));
       for (const p of curve.points) {
         const c = svgEl(doc, 'circle', {
-          cx: mx(p.minute), cy: my(p.indoorPm25), r: curve.strategyId === model.state.strategy ? 3.4 : 2.4,
+          cx: mx(p.minute), cy: my(p.indoorPm25), r: isSel ? 3.6 : 2.4,
           fill: color, tabindex: 0, role: 'img',
+          ...(isSel ? { stroke: '#ffffff', 'stroke-width': 1 } : { opacity: 0.75 }),
         });
         c.appendChild(svgEl(doc, 'title', {})).textContent =
           `${curve.name} at ${p.minute} min: ${p.indoorPm25} ug/m3 (AQI ${p.indoorAqi})`;
@@ -944,8 +1018,10 @@ export function initFleetLab(doc = document, win = window) {
       ui.decayLegend.textContent = '';
       for (const curve of model.decay) {
         const li = doc.createElement('li');
+        if (curve.strategyId === model.state.strategy) li.className = 'is-selected';
         const sw = doc.createElement('span');
         sw.className = 'fl-legend-swatch';
+        if (curve.strategyId === 'merv8-baseline') sw.classList.add('fl-legend-swatch-dash');
         sw.style.background = STRATEGY_COLORS[curve.strategyId] || '#0f766e';
         li.appendChild(sw);
         li.appendChild(doc.createTextNode(curve.name));

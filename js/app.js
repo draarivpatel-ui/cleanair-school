@@ -71,6 +71,7 @@ const els = {
 // EPA 2024 AQI tier edges; the hero band draws six equal-width tiers.
 const AQI_EDGES = [0, 50, 100, 150, 200, 300, 500];
 const NARROW_QUERY = window.matchMedia('(max-width: 520px)');
+const MID_QUERY = window.matchMedia('(max-width: 1080px)');
 
 function aqiBandPct(aqi) {
   const a = Math.min(500, Math.max(0, Number(aqi) || 0));
@@ -129,10 +130,12 @@ function init() {
   els.btnCloseBench.addEventListener('click', () => { els.benchPanel.hidden = true; });
   els.btnExportJson.addEventListener('click', downloadPlanJson);
   els.btnPrint.addEventListener('click', () => window.print());
-  NARROW_QUERY.addEventListener('change', () => {
+  const rerenderChart = () => {
     const out = state.lastOutput;
     if (out) renderDecayChart(out.baseline.trajectory, out.upgraded.trajectory);
-  });
+  };
+  NARROW_QUERY.addEventListener('change', rerenderChart);
+  MID_QUERY.addEventListener('change', rerenderChart);
 
   loadPreset(SCHOOL_PRESETS[0].id);
 }
@@ -307,39 +310,52 @@ function recompute() {
   renderBudget();
 }
 
+// Round axis maximum and step (1, 2, 2.5, 5 x 10^n) so ticks read as plain numbers.
+function niceAxis(rawMax, target = 4) {
+  const raw = Math.max(rawMax, 1e-6) / target;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= raw - 1e-9);
+  const count = Math.max(1, Math.ceil(rawMax / step - 1e-9));
+  return { step, max: count * step, count };
+}
+
 function renderDecayChart(baseTraj, upTraj) {
   const svg = els.decaySvg;
   svg.textContent = '';
   const ns = 'http://www.w3.org/2000/svg';
   const narrow = NARROW_QUERY.matches;
-  const W = narrow ? 360 : 480, H = narrow ? 250 : 260, PAD = narrow ? 36 : 42;
+  const mid = !narrow && MID_QUERY.matches;
+  const W = narrow ? 360 : mid ? 600 : 480, H = narrow ? 250 : mid ? 300 : 260, PAD = narrow ? 36 : 42;
   const FS = narrow ? 11.5 : 11;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  const maxY = Math.max(10, ...baseTraj.map((p) => p.indoorPm25), ...upTraj.map((p) => p.indoorPm25));
+  const rawMax = Math.max(10, ...baseTraj.map((p) => p.indoorPm25), ...upTraj.map((p) => p.indoorPm25));
+  const axis = niceAxis(rawMax);
+  const maxY = axis.max;
   const mapX = (min) => PAD + (min / 120) * (W - 2 * PAD);
   const mapY = (val) => H - PAD - (val / maxY) * (H - 2 * PAD);
   state.chart = { baseTraj, upTraj, mapX, mapY, W, PAD };
 
   const fmtTick = (v) => {
-    if (v >= 1000) return `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k`;
-    return String(Math.round(v));
+    if (v >= 1000) return `${Number((v / 1000).toFixed(1))}k`;
+    return Number.isInteger(v) ? String(v) : v.toFixed(1);
   };
   const unit = svgEl(ns, 'text', { x: PAD - 6, y: PAD - 14, 'font-size': FS, fill: '#4a5753', 'font-weight': 650 });
   unit.textContent = 'Indoor PM2.5, ug/m3';
   svg.appendChild(unit);
-  for (let i = 0; i <= 4; i++) {
-    const y = PAD + (i / 4) * (H - 2 * PAD);
-    svg.appendChild(svgEl(ns, 'line', { x1: PAD, y1: y, x2: W - PAD, y2: y, stroke: i === 4 ? '#b8c5c0' : '#e3e9e7', 'stroke-width': 1 }));
+  for (let i = 0; i <= axis.count; i++) {
+    const v = axis.step * i;
+    const y = mapY(v);
+    svg.appendChild(svgEl(ns, 'line', { x1: PAD, y1: y, x2: W - PAD, y2: y, stroke: i === 0 ? '#9aa9a4' : '#e3e9e7', 'stroke-width': 1 }));
     const t = svgEl(ns, 'text', { x: PAD - 6, y: y + 4, 'text-anchor': 'end', 'font-size': FS, fill: '#4a5753' });
-    t.textContent = fmtTick(maxY * (1 - i / 4));
+    t.textContent = fmtTick(v);
     svg.appendChild(t);
   }
   const basePts = baseTraj.map((p) => `${mapX(p.minute).toFixed(1)},${mapY(p.indoorPm25).toFixed(1)}`).join(' ');
   const upPts = upTraj.map((p) => `${mapX(p.minute).toFixed(1)},${mapY(p.indoorPm25).toFixed(1)}`).join(' ');
-  svg.appendChild(svgEl(ns, 'polyline', { points: basePts, fill: 'none', stroke: '#6b7785', 'stroke-width': 2, 'stroke-dasharray': '6 4', 'stroke-linejoin': 'round' }));
+  svg.appendChild(svgEl(ns, 'polyline', { points: basePts, fill: 'none', stroke: '#5b6672', 'stroke-width': 2, 'stroke-dasharray': '6 4', 'stroke-linejoin': 'round' }));
   svg.appendChild(svgEl(ns, 'polyline', { points: upPts, fill: 'none', stroke: '#0d6b63', 'stroke-width': 3, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
   for (const p of baseTraj) {
-    const c = svgEl(ns, 'circle', { cx: mapX(p.minute), cy: mapY(p.indoorPm25), r: 2.4, fill: '#6b7785' });
+    const c = svgEl(ns, 'circle', { cx: mapX(p.minute), cy: mapY(p.indoorPm25), r: 2.4, fill: '#5b6672' });
     const tip = svgEl(ns, 'title', {});
     tip.textContent = `${p.minute} min HVAC only: ${p.indoorPm25} ug/m3 (AQI ${p.indoorAqi})`;
     c.appendChild(tip);
@@ -352,8 +368,26 @@ function renderDecayChart(baseTraj, upTraj) {
     c.appendChild(tip);
     svg.appendChild(c);
   }
+  // Direct end labels: the 120-minute value of each line, nudged apart when close.
+  const lastBase = baseTraj[baseTraj.length - 1];
+  const lastUp = upTraj[upTraj.length - 1];
+  if (lastBase && lastUp) {
+    let yb = mapY(lastBase.indoorPm25) + 4;
+    let yu = mapY(lastUp.indoorPm25) + 4;
+    if (Math.abs(yb - yu) < FS + 1) {
+      const midY = (yb + yu) / 2;
+      const half = (FS + 1) / 2;
+      if (lastBase.indoorPm25 >= lastUp.indoorPm25) { yb = midY - half; yu = midY + half; } else { yb = midY + half; yu = midY - half; }
+    }
+    const endX = mapX(120) + 6;
+    const eb = svgEl(ns, 'text', { x: endX, y: yb, 'font-size': FS, fill: '#4a5753', 'font-weight': 650, 'data-end-label': 'base' });
+    eb.textContent = fmtTick(lastBase.indoorPm25);
+    const eu = svgEl(ns, 'text', { x: endX, y: yu, 'font-size': FS, fill: '#08433e', 'font-weight': 750, 'data-end-label': 'up' });
+    eu.textContent = fmtTick(lastUp.indoorPm25);
+    svg.append(eb, eu);
+  }
   for (const min of [0, 30, 60, 90, 120]) {
-    svg.appendChild(svgEl(ns, 'line', { x1: mapX(min), y1: H - PAD, x2: mapX(min), y2: H - PAD + 4, stroke: '#b8c5c0', 'stroke-width': 1 }));
+    svg.appendChild(svgEl(ns, 'line', { x1: mapX(min), y1: H - PAD, x2: mapX(min), y2: H - PAD + 4, stroke: '#9aa9a4', 'stroke-width': 1 }));
     const t = svgEl(ns, 'text', { x: mapX(min), y: H - PAD + 17, 'text-anchor': 'middle', 'font-size': FS, fill: '#4a5753' });
     t.textContent = `${min}m`;
     svg.appendChild(t);
