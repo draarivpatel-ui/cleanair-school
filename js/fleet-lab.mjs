@@ -478,9 +478,9 @@ export function verifyFleetBrief(payload, digest) {
   return sha256Hex(canonicalJson(payload)) === digest;
 }
 
-function csvCell(value) {
+export function csvCell(value) {
   let s = value === null || value === undefined ? '' : String(value);
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  if (/^[\s\u0085\u180E\u200B\u200C\u200D\u2060\uFEFF]*[=+\-@\t\r]/.test(s)) s = `'${s}`;
   if (/[",\n\r]/.test(s)) s = `"${s.replace(/"/g, '""')}"`;
   return s;
 }

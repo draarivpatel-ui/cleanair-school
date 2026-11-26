@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import {
   SMOKE_REGIMES, FLEET_STRATEGIES, FLEET_ROOM, FLEET_DEFAULTS, FLEET_LIMITS,
   ASHRAE_241_CLASSROOM_CFMP,
-  sha256Hex, canonicalJson,
+  sha256Hex, canonicalJson, csvCell,
   normalizeFleetState, encodeCasHash, decodeCasHash,
   evaluateFleetLab, auditedFleetBrief, verifyFleetBrief,
   fleetBriefCsv, fleetBriefMarkdown, fleetBriefJson,
@@ -960,5 +960,11 @@ test('model: unitsFor5Ach for hvac-only rows counts reference CR boxes', () => {
     const s = m.strategies.find((x) => x.id === id);
     assert.ok(Number.isInteger(s.unitsFor5Ach) && s.unitsFor5Ach >= 1, `${id}: ${s.unitsFor5Ach}`);
     assert.equal(s.cleanerCount, 0);
+  }
+});
+
+test('csvCell neutralizes formula triggers behind whitespace and invisible Unicode', () => {
+  for (const lead of [' ', '\t', '\u00A0', '\u200B', '\uFEFF']) {
+    assert.ok(csvCell(`${lead}=cmd`).startsWith("'"), JSON.stringify(lead));
   }
 });
