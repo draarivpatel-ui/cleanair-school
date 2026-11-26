@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   portableCadrWithDerates, filterLifecycle, compareCleanerOptions,
   schoolBudgetProjection, evaluateClassroomAir, CLEANER_CATALOG,
-  ADDITIONAL_UNIT_EFFICIENCY, LOADED_FILTER_CADR_FRACTION,
+  ADDITIONAL_UNIT_EFFICIENCY, LOADED_FILTER_CADR_FRACTION, MAX_BUDGET_CLASSROOMS,
 } from '../js/air-engine.mjs';
 
 const ROOM = {
@@ -147,4 +147,22 @@ test('budget: per-classroom three-year cost equals hardware plus filter share', 
 test('budget: degenerate classroom count clamps to one', () => {
   const p = schoolBudgetProjection(0);
   assert.equal(p.classroomCount, 1);
+});
+
+test('budget: an absurd classroom count clamps instead of overflowing the totals', () => {
+  const p = schoolBudgetProjection(1e308);
+  assert.equal(p.classroomCount, MAX_BUDGET_CLASSROOMS);
+  for (const key of ['hardwareUsd', 'filtersYear1Usd', 'filters3YearUsd', 'total3YearUsd', 'perClassroom3YearUsd']) {
+    assert.ok(Number.isFinite(p[key]), key + ' should stay finite');
+  }
+});
+
+test('derates: non-finite unit counts never yield NaN or Infinity CADR', () => {
+  for (const count of [NaN, Infinity, -Infinity, undefined, 1e308]) {
+    const d = portableCadrWithDerates(CLEANER_CATALOG.corsi_box, count, 0);
+    assert.equal(d.effectiveCfm, 0);
+    assert.equal(d.nameplateCfm, 0);
+    assert.ok(Number.isFinite(d.placementFactor));
+    assert.ok(Number.isFinite(d.loadingFactor));
+  }
 });

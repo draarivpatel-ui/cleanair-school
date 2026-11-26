@@ -51,6 +51,8 @@ export const ADDITIONAL_UNIT_EFFICIENCY = 0.92;
 export const LOADED_FILTER_CADR_FRACTION = 0.6;
 /** Default filter service life for the CR box when no timeline is given (days). */
 export const DEFAULT_REPLACEMENT_DAYS = 90;
+/** Upper display-safety bound on a school budget request; the count input allows at most 200. */
+export const MAX_BUDGET_CLASSROOMS = 100000;
 
 /** Coerce any input to a finite number or return the supplied fallback. Never leaks NaN/Infinity. */
 export function finiteOr(value, fallback) {
@@ -127,15 +129,20 @@ export function computeEpaNowCast(hourlySeries) {
  *   LOADED_FILTER_CADR_FRACTION at full load.
  */
 export function portableCadrWithDerates(cleaner, count, filterLoadFraction = 0) {
-  if (!cleaner || !Number.isFinite(cleaner.cadrCfm) || cleaner.cadrCfm <= 0 || count <= 0) {
+  const units = Number(count);
+  if (!cleaner || !Number.isFinite(cleaner.cadrCfm) || cleaner.cadrCfm <= 0 || !Number.isFinite(units) || units <= 0) {
     return { effectiveCfm: 0, nameplateCfm: 0, placementFactor: 1, loadingFactor: 1 };
   }
   const load = Math.min(1, Math.max(0, finiteOr(filterLoadFraction, 0)));
   const loadingFactor = 1 - load * (1 - LOADED_FILTER_CADR_FRACTION);
-  const placementFactor = count === 1 ? 1 : (1 + (count - 1) * ADDITIONAL_UNIT_EFFICIENCY) / count;
-  const nameplateCfm = cleaner.cadrCfm * count;
+  const placementFactor = units === 1 ? 1 : (1 + (units - 1) * ADDITIONAL_UNIT_EFFICIENCY) / units;
+  const nameplateCfm = cleaner.cadrCfm * units;
+  const effectiveCfm = Number((nameplateCfm * placementFactor * loadingFactor).toFixed(1));
+  if (!Number.isFinite(nameplateCfm) || !Number.isFinite(placementFactor) || !Number.isFinite(effectiveCfm)) {
+    return { effectiveCfm: 0, nameplateCfm: 0, placementFactor: 1, loadingFactor: 1 };
+  }
   return {
-    effectiveCfm: Number((nameplateCfm * placementFactor * loadingFactor).toFixed(1)),
+    effectiveCfm,
     nameplateCfm,
     placementFactor: Number(placementFactor.toFixed(4)),
     loadingFactor: Number(loadingFactor.toFixed(4)),
@@ -335,7 +342,7 @@ export function compareCleanerOptions(baseInput = {}) {
  * Every field is a modeled assumption, not an actual procurement.
  */
 export function schoolBudgetProjection(classroomCount, cleanerId = 'corsi_box') {
-  const rooms = Math.max(1, Math.round(finiteOr(classroomCount, 20)));
+  const rooms = Math.max(1, Math.min(MAX_BUDGET_CLASSROOMS, Math.round(finiteOr(classroomCount, 20))));
   const cleaner = CLEANER_CATALOG[cleanerId] || CLEANER_CATALOG.corsi_box;
   const hardware = cleaner.unitCostUsd * rooms;
   const filtersYear1 = cleaner.annualFilterUsd * rooms;
