@@ -255,7 +255,7 @@ body {
   paint-order: stroke; stroke: var(--surface-sunk); stroke-width: 3.5px; stroke-linejoin: round;
 }
 .decay-minute-label { display: block; font-size: 0.82rem; font-weight: 650; color: var(--ink-muted); }
-.decay-minute { display: block; width: 100%; min-height: 32px; margin: 0 0 6px; accent-color: var(--accent); }
+.decay-minute { display: block; width: 100%; min-height: 44px; padding: 6px 0; margin: 0 0 6px; accent-color: var(--accent); }
 .decay-minute:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .decay-readout {
   margin: 0 0 10px; min-height: 1.3em; font-size: 0.86rem; font-weight: 600; color: var(--accent-deep);

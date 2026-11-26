@@ -148,6 +148,14 @@ test('hygiene: no small all-caps eyebrow class above titles', () => {
   assert.equal(/text-transform\s*:\s*uppercase/i.test(css), false);
 });
 
+test('a11y: decay scrubber meets the 44px mobile touch-target floor', () => {
+  const rule = css.match(/\.decay-minute\s*\{[^}]*\}/);
+  assert.ok(rule, 'missing .decay-minute rule');
+  const m = rule[0].match(/min-height:\s*(\d+)px/);
+  assert.ok(m, '.decay-minute needs an explicit min-height');
+  assert.ok(Number(m[1]) >= 44, `scrubber min-height ${m[1]}px is below the 44px touch floor`);
+});
+
 test('hygiene: no tagline paragraph immediately after the h1', () => {
   const afterH1 = html.slice(html.indexOf('id="hero-title"'));
   assert.match(afterH1, /<\/h1>\s*<p class="hero-lede">/);
